@@ -365,9 +365,9 @@ let rank_person_file cells from sample_list_filename person_oid =
   let ares = Evalm.evalaway_file cells (Some from) sample_list_filename in
   find_rank person_oid ares
 
-let rank_person_serv (link:bool) (from:string) (person_ports: (int * int) list) (sample_list_filename:string) (person_oid:int) =
+let rank_person_serv (person_ports: (int * int) list) (link:bool) (from:string) (sample_list_filename:string) (person_oid:int) =
   (* we'll keep the LM results as both array and list, for convenience *)
-  let ares = Evalm.evalaway_serv link from person_ports sample_list_filename in
+  let ares = Evalm.evalaway_serv person_ports link from sample_list_filename in
   find_rank person_oid ares
   
 let rec take l n =
@@ -480,9 +480,9 @@ let () =
       write_sample observed from             case_info_filename;
       
       if using_servers then
-        rank_person_serv link  from person_ports case_list_filename oid
+        rank_person_serv person_ports link from case_list_filename oid
       else
-        rank_person_file cells from              case_list_filename oid
+        rank_person_file cells from             case_list_filename oid
         
       ) (* fun i *)
       
