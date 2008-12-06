@@ -365,9 +365,9 @@ let rank_person_file cells from sample_list_filename person_oid =
   let ares = Evalm.evalaway_file cells (Some from) sample_list_filename in
   find_rank person_oid ares
 
-let rank_person_serv person_ports from sample_list_filename person_oid =
+let rank_person_serv (link:bool) (from:string) (person_ports: (int * int) list) (sample_list_filename:string) (person_oid:int) =
   (* we'll keep the LM results as both array and list, for convenience *)
-  let ares = Evalm.evalaway_serv from person_ports sample_list_filename in
+  let ares = Evalm.evalaway_serv link from person_ports sample_list_filename in
   find_rank person_oid ares
   
 let rec take l n =
@@ -399,10 +399,12 @@ let elem_match list regex's =
     let meat = (Pcre.extract ~rex:re elem).(1) in
     Some meat
   with Not_found -> None
+  
+let yes_no = function | true -> "yes" | _ -> "no"
 
 let () =
   let argv = Array.to_list Sys.argv in
-  
+  let order = 5 in (* parameterize *)
   let from_opt = elem_match argv "--from=(\\d{4}(-\\d{2}){2})" in
   let from = match from_opt with 
   | Some date's -> date's
@@ -420,12 +422,18 @@ let () =
   let take_people = elem_match argv "--take=(\\d+)" in
   let ppp_opt = elem_match argv "--ppp=(.*\\.ppp)" in
   let using_servers = ppp_opt <> None in
+  let link = elem_match argv "(--clients)" <> None in
   let person_ports = match ppp_opt with
-    | Some filename -> let ppp = Evalm.read_ppp filename in List.map (function x,y,_ -> x,y) ppp
+    | Some filename -> begin let ppp = Evalm.read_ppp filename in 
+                       let pp = List.map (function x,y,_ -> x,y) ppp in
+                       match link with
+                       | true -> Evalm.create_all_clients order pp
+                       | _    -> pp end
     | None          -> []
   in
-  
-  let using_what = if using_servers then sprintf "servers (from %s)" (unsome ppp_opt) else "files" in
+  let using_what = if using_servers 
+  then sprintf "servers (from %s), clients = %s" (unsome ppp_opt) (yes_no link)
+  else "files" in
   printf "evaluating on trained before %s using %s\n" from using_what;
   
   let home   = Unix.getenv "HOME" in
@@ -442,7 +450,7 @@ let () =
 
   let eligible = pput dataframe from sample_len in
   
-  let sample_index = 2 in (* use sample_len to differentiate *)
+  let sample_index = 3 in (* use sample_len to differentiate *)
   let sample_suffix = 
           "-" ^ from 
         ^ "-" ^ (string_of_int sample_len) 
@@ -472,18 +480,20 @@ let () =
       write_sample observed from             case_info_filename;
       
       if using_servers then
-        rank_person_serv person_ports from case_list_filename oid
+        rank_person_serv link  from person_ports case_list_filename oid
       else
-        rank_person_file cells        from case_list_filename oid
+        rank_person_file cells from              case_list_filename oid
         
       ) (* fun i *)
       
         (range each_person_runs))
       some_people
   in
-
+  
   print_results ranks;
-  write_results ranks ranks_filename
+  write_results ranks ranks_filename;
+  
+  if link then Evalm.destroy_all_clients person_ports else ();
   
   (* NB add time period for sample and test span coverage *)
   (* NB people clustering by top rank *)

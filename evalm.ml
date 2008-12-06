@@ -134,7 +134,7 @@ let spawn_server_process command_line_prefix port =
   Unix.create_process args.(0) args in_fd out_fd err_fd
 
 
-let launch_lm_server dir ?date port_base oc_pids =
+let launch_lm_server dir ?date port_base oc_ppp =
   let person's = Filename.basename dir in
   let person   = int_of_string person's in
   let (person'date, date's) = 
@@ -149,7 +149,7 @@ let launch_lm_server dir ?date port_base oc_pids =
       let port = person_port port_base person in
       (* print_endline command_line_prefix; *)
       let pid = spawn_server_process command_line_prefix port in
-      fprintf oc_pids "%d\t%d\t%d\n" person port pid;
+      fprintf oc_ppp "%d\t%d\t%d\n" person port pid;
       output_string stdout ":"; flush stdout;        
       Some (person,port,pid) (* NB need parens, compare: Some 1,2 : int option * int ! *)
     end 
@@ -157,19 +157,19 @@ let launch_lm_server dir ?date port_base oc_pids =
     None
       
       
-let launch_all_servers ?(f=launch_lm_server) root ?date port_base pids_filename =
-  let oc_pids = open_out pids_filename in
+let launch_all_servers ?(f=launch_lm_server) root ?date port_base ppp_filename =
+  let oc_ppp = open_out ppp_filename in
   let numbers = Str.regexp "^[0-9]+$" in
   let subdirs = Array.to_list (Sys.readdir root) in
   let subdirs = List.filter (fun x -> Str.string_match numbers x 0 && x <> "0") subdirs in
   (* let subdirs = ["1";"9"] in *)
   let opt_ppp = match date with
     | Some date ->
-      List.map (fun x -> f (Filename.concat root x) ~date:date port_base oc_pids) subdirs
+      List.map (fun x -> f (Filename.concat root x) ~date:date port_base oc_ppp) subdirs
     | None ->
-      List.map (fun x -> f (Filename.concat root x) port_base oc_pids) subdirs
+      List.map (fun x -> f (Filename.concat root x) port_base oc_ppp) subdirs
   in
-  close_out oc_pids;
+  close_out oc_ppp;
   let some_ppp = List.filter (function | Some _ -> true | None -> false)      opt_ppp  in
   let ppp = List.map (function | Some x -> x | _ -> failwith "can't be None") some_ppp in
   ppp (* person,port,pid *)
@@ -204,14 +204,7 @@ let read_ppp filename =
   go ic []
   
 
-let evalm_serv date seqfile person_port =
-  let person,port = person_port in
-  let stats =
-    let command = sprintf "ngram -use-server %d@localhost -ppl %s" port seqfile in
-    (* print_endline command; *)
-    output_string stdout "."; flush stdout;
-    let result = read_process command in
-    (* print_endline result *)
+let ppl_stats result = 
     match Str.string_match (Str.regexp 
       "[^\n]+\n\\([0-9]+\\) zeroprobs, logprob= \\([0-9.-]+\\) ppl= \\([0-9.]+\\) ppl1= \\([0-9.]+\\)") 
       result 0 with 
@@ -221,13 +214,45 @@ let evalm_serv date seqfile person_port =
           fun x -> float_of_string (Str.matched_group x result)) [1;2;3;4]) in
         Some numbers
       | _ -> None
-    in (* stats *)
-      person, date, stats
+  
+let evalm_serv date seqfile person_port =
+  let person,port = person_port in
+  let command = sprintf "ngram -use-server %d@localhost -ppl %s" port seqfile in
+  (* print_endline command; *)
+  let result = read_process command in
+  (* print_endline result; *)
+  output_string stdout "."; flush stdout;
+  let stats = ppl_stats result in
+  person, date, stats
       
 
 let evaportwalk f date person_ports seqfile =
   List.map (f date seqfile) person_ports
 
-let evalaway_serv date person_ports seqfile  =
-  let lres = evaportwalk evalm_serv date person_ports seqfile in
+let evalm_link date seqfile person_client =
+  let person,client = person_client in
+  let result = Lmclient.compute client seqfile in
+  (* print_endline result; *)
+  output_string stdout "."; flush stdout;
+  let stats = ppl_stats result in
+  person, date, stats
+
+let evalaway_serv link date person_ports seqfile  =
+  let f = match link with
+    | true -> evalm_link
+    | _    -> evalm_serv in
+  let lres = evaportwalk f date person_ports seqfile in
   sort_perps lres (* converts result list to array for sorting *)
+
+let create_all_clients order person_ports =
+  List.map (function person,port -> 
+    let port's = sprintf "%d@localhost" port in
+    let client = Lmclient.create port's order in
+    (* if client < 0 then failwith "coulnd't create client" else (); *)
+    assert (client >= 0);
+    person,client) person_ports
+    
+let destroy_all_clients person_clients =
+  let clients = List.map snd person_clients in
+  let backwards = List.rev clients in
+  List.iter (fun client -> assert ((Lmclient.destroy client) >= 0)) backwards

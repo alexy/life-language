@@ -61,7 +61,7 @@ extern "C" value lmclient_compute (value v_lm_handle, value v_filename) {
   CAMLparam2 (v_lm_handle, v_filename);
 
   int lm_handle = Int_val (v_lm_handle);
-  cout << "compute got lm_handle=" << lm_handle << endl;
+  //cout << "compute got lm_handle=" << lm_handle << endl;
 
   if (!valid_handle(lm_handle)) {
     CAMLreturn (caml_copy_string(""));

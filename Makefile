@@ -19,7 +19,7 @@ evalm: evalm.ml
 	ocamlfind ocamlc -package unix,str -linkpkg -o $@ $<
 
 sample: evalm.ml sample.ml
-	 ocamlfind ocamlc -package unix,pcre,pgocaml -linkpkg -o $@ percells.cmo $^
+	 ocamlfind ocamlc -package unix,pcre,pgocaml -linkpkg -o $@ percells.cmo -I crilm crilm/lmclient.cma $^
 	
 samplebin: evalm.ml samplebin.ml
 	 ocamlfind ocamlopt -package str,unix,pcre -linkpkg -o $@ $^
