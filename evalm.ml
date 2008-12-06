@@ -237,7 +237,7 @@ let evalm_link date seqfile person_client =
   let stats = ppl_stats result in
   person, date, stats
 
-let evalaway_serv link date person_ports seqfile  =
+let evalaway_serv person_ports link date seqfile  =
   let f = match link with
     | true -> evalm_link
     | _    -> evalm_serv in
