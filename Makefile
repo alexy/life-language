@@ -4,6 +4,8 @@ COMP_PKG :=pgocaml,pgocaml.statements
 CMO      :=.cmo
 ML       :=.ml
 
+LMCLIENT = -I crilm crilm/lmclient.cma
+
 all: ${PROJECT}
 
 cellspans celltimes: %: %.cmo 
@@ -19,15 +21,20 @@ evalm: evalm.ml
 	ocamlfind ocamlc -package unix,str -linkpkg -o $@ $<
 
 sample: evalm.ml sample.ml
-	 ocamlfind ocamlc -package unix,pcre,pgocaml -linkpkg -o $@ percells.cmo -I crilm crilm/lmclient.cma $^
+	 ocamlfind ocamlc -package unix,pcre,pgocaml -linkpkg -o $@ percells.cmo $(LMCLIENT) $^
 	
 samplebin: evalm.ml samplebin.ml
 	 ocamlfind ocamlopt -package str,unix,pcre -linkpkg -o $@ $^
 
 servctl: evalm.ml servctl.ml
-	 ocamlfind ocamlc -g -package str,unix,pcre -linkpkg -o $@ $^
+	 ocamlfind ocamlc -g -package str,unix,pcre -linkpkg -o $@ $(LMCLIENT) $^
 	
 clean:
 	rm -f $(PROJECT) $(PROJECT).cmo
 	
 .SUFFIXES: .cmo .cmi .ml
+
+test-sample:
+	./servctl --from=2004-10-01 --ppp=2004-10-01.ppp --base=10000 start
+	./sample  --from=2004-10-01 --ppp=2004-10-01.ppp --matrix=percells.bin --take=3 --clients
+	./servctl --from=2004-10-01 --ppp=2004-10-01.ppp stop
