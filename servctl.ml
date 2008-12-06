@@ -22,7 +22,7 @@ let () =
   
   let start = (elem_match argv "(^start$)") <> None in
   let stop  = (elem_match argv "(^stop$)")  <> None in
-  if stop && start then failwith "either stop or start" else ();
+  if not (stop || start) || (stop && start) then failwith "either stop or start" else ();
   let action = if start then Start else Stop in
   
   let from_opt = elem_match argv "--from=(\\d{4}(-\\d{2}){2})" in
