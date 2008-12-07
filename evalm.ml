@@ -205,8 +205,9 @@ let read_ppp filename =
   
 
 let ppl_stats result = 
-    match Str.string_match (Str.regexp 
-      "[^\n]+\n\\([0-9]+\\) zeroprobs, logprob= \\([0-9.-]+\\) ppl= \\([0-9.]+\\) ppl1= \\([0-9.]+\\)") 
+    match Str.string_match (Str.regexp
+      (* "[^\n]+\n" -- for single-list file and the full pplFile return of stats *)
+      "\\([0-9]+\\) zeroprobs, logprob= \\([0-9.-]+\\) ppl= \\([0-9.]+\\) ppl1= \\([0-9.]+\\)") 
       result 0 with 
       | true ->
         let numbers = Array.of_list 
@@ -215,6 +216,15 @@ let ppl_stats result =
         Some numbers
       | _ -> None
   
+let rec third = function _::_::a::xs -> a::(third xs) | _ -> []  
+(* let third list = List.fold_left2 
+     (fun acc a i -> if i mod 3 = 0 then a::acc else acc) list (range (List.length list)) *)
+
+let ppl_lines text =
+  let lines = Str.split (Str.regexp "\n") text in
+  let every3rd = third lines in
+  List.map ppl_stats every3rd 
+  
 let evalm_serv date seqfile person_port =
   let person,port = person_port in
   let command = sprintf "ngram -use-server %d@localhost -ppl %s" port seqfile in
@@ -222,20 +232,25 @@ let evalm_serv date seqfile person_port =
   let result = read_process command in
   (* print_endline result; *)
   output_string stdout "."; flush stdout;
-  let stats = ppl_stats result in
-  person, date, stats
+  let stats_list = ppl_lines result in
+  List.map (fun stats ->
+  person, date, stats) stats_list
       
 
 let evaportwalk f date person_ports seqfile =
-  List.map (f date seqfile) person_ports
+  let lili = List.map  (f date seqfile) person_ports in
+  (* now, merge all lists *)
+  (* List.gold_left List.append [] <=> List.concat *)
+  List.concat lili
 
 let evalm_link date seqfile person_client =
   let person,client = person_client in
   let result = Lmclient.compute client seqfile in
   (* print_endline result; *)
   output_string stdout "."; flush stdout;
-  let stats = ppl_stats result in
-  person, date, stats
+  let stats_list = ppl_lines result in
+  List.map (fun stats ->
+  person, date, stats) stats_list
 
 let evalaway_serv person_ports link date seqfile  =
   let f = match link with

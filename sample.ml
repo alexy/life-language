@@ -284,24 +284,27 @@ let pick_person eligible =
   let i = Random.int eligible_len in
   List.nth eligible i
 
-let pick_start our_guy sample_len =
+let pick_start sample_len our_guy =
   let _,(upto,total) = our_guy in
   let end_starts = upto + sample_len in
   let start = upto + Random.int (total - end_starts) (* +1? nah? *) in
   start
   
-let sample our_guy start from sample_len =
+let pick_starts sample_len our_guy n =
+  (* call a fun n times -- independent of iteration number! *)
+  List.map (fun _ -> pick_start sample_len our_guy) (range n)
+  
+let sample from sample_len our_guy start =
   let (pos,person_oid),(upto,total) = our_guy in
   let prefix_len = start - 1 in
   let finish = prefix_len + sample_len in
-  printf "person_oid: %d, skipping %d, upto = %d, total = %d\n" person_oid prefix_len upto total;
+  (* printf "person_oid: %d, skipping %d, upto = %d, total = %d\n" person_oid prefix_len upto total; *)
   let cells  = read_list1 ~skip:prefix_len ~n:sample_len (person_cells_file person_oid) in
   let times  = read_lines ~skip:prefix_len ~n:sample_len (person_times_file person_oid) in
   (cells,times),our_guy,(start,finish)
-
-  (*
-  let s1 = sample "2004-10-01" 10 
-  *)
+  
+let samples from sample_len our_guy starts =
+  List.map (sample from sample_len our_guy) starts
   
 let print_list ?(out=stdout) list =
   let list's = String.concat "\t" list in
@@ -314,6 +317,7 @@ let person_oid   = function (_,x),_   -> x
 
 (* picking apart a sample *)
 let sample_cells = function (x,_),_,_ -> x
+let sample_cells_list = List.map sample_cells
 
 let sample_times = function (_,x),_,_ -> x
 
@@ -323,9 +327,14 @@ let upto_total   = function _,(_,x),_ -> x
 
 let start_finish = function _,(_,_),x -> x
 
-let write_int_list ilist filename =
+let write_int_list list filename =
   let oc = open_out filename in
-  print_list ~out:oc (List.map string_of_int ilist);
+  print_list ~out:oc (List.map string_of_int list);
+  close_out oc
+
+let write_int_lists lists filename =
+  let oc = open_out filename in
+  List.iter (fun list -> print_list ~out:oc (List.map string_of_int list)) lists;
   close_out oc
 
 let print_sample ?(out=stdout) ?full observed date =
@@ -348,6 +357,12 @@ let write_sample sample date filename =
   print_sample ~out:oc sample date;
   close_out oc
   
+let write_samples samples date filename =
+  let oc = open_out filename in
+  List.iter (fun sample -> (print_sample ~out:oc sample date)) samples;
+  close_out oc
+  
+  
 let person_rank (oid:int) oids =
   let last = (List.length oids) - 1 in
   let oids_nth = List.combine oids (range0 last) in
@@ -355,6 +370,7 @@ let person_rank (oid:int) oids =
 
 let find_rank person_oid ares =
   (* Evalm.print_perps ares *)
+  (* NB: instead of this, find in array via binary search! *)
   let lres = Array.to_list ares in
   let rank = person_rank person_oid (List.map (function (x,_,_) -> x) lres) in
   printf "person_oid %d => rank %d!\n" person_oid rank;
@@ -419,6 +435,9 @@ let () =
   let each_person_runs = match (elem_match argv "--runs=(\\d+)") with
   | Some runs -> int_of_string runs
   | None -> 1 in
+  let batch = match (elem_match argv "--batch=(\\d+)") with
+  | Some batch -> int_of_string batch
+  | None -> 1 in
   let take_people = elem_match argv "--take=(\\d+)" in
   let ppp_opt = elem_match argv "--ppp=(.*\\.ppp)" in
   let using_servers = ppp_opt <> None in
@@ -452,8 +471,9 @@ let () =
   
   let sample_index = 3 in (* use sample_len to differentiate *)
   let sample_suffix = 
-          "-" ^ from 
-        ^ "-" ^ (string_of_int sample_len) 
+          "_" ^ from 
+        ^ "_s" ^ (string_of_int sample_len)
+        ^ (if batch > 1 then "_x" ^ (string_of_int batch) else "")
         ^ "-" ^ (string_of_int sample_index) in
   let sample_list_filename = sample_list_base ^ sample_suffix in
   let sample_info_filename = sample_info_base ^ sample_suffix in
@@ -469,15 +489,16 @@ let () =
   (fun person -> List.map 
     (fun i ->
       let i's = string_of_int i in
-      let start = pick_start person sample_len in
       let oid   = person_oid person in
       let oid's = string_of_int oid in
-      let observed = sample person start from sample_len in
-      let case_suffix = "-p"^oid's^"-"^i's in
+      let starts = pick_starts sample_len person batch in
+      let observed = samples from sample_len person starts in
+      let case_suffix = "_p"^oid's
+        ^ ( if each_person_runs > 1 then "-"^i's else "") in
       let case_list_filename = sample_list_filename ^ case_suffix in
       let case_info_filename = sample_info_filename ^ case_suffix in
-      write_int_list (sample_cells observed) case_list_filename;
-      write_sample observed from             case_info_filename;
+      write_int_lists (sample_cells_list observed) case_list_filename;
+      write_samples   observed from                case_info_filename;
       
       if using_servers then
         rank_person_serv person_ports link from case_list_filename oid
@@ -500,3 +521,4 @@ let () =
   (* NB error as a function of test-training time distance *)
   (* NB compressing all repeated cells; skip LM models?  FLM? *)
   (* NB retain only small sample info (starting point seq number -- devise SQL to get row from person's seq) *)
+  (* NB compute time range for each sample, write out in full sample *)
