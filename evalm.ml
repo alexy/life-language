@@ -17,23 +17,31 @@ let read_process command =
 let ppl_stats result = 
     match Str.string_match (Str.regexp
       (* "[^\n]+\n" -- for single-list file and the full pplFile return of stats *)
-      "\\([0-9]+\\) zeroprobs, logprob= \\([0-9.-]+\\) ppl= \\([0-9.]+\\) ppl1= \\([0-9.]+\\)") 
+      (* NB: need a better regexp for xx.yyy[e+NN] floating-point perplexities *)
+      "\\([0-9]+\\) zeroprobs, logprob= \\([0-9.e+-]+\\) ppl= \\([0-9.e+-]+\\) ppl1= \\([0-9.e+-]+\\)") 
       result 0 with 
       | true ->
         let numbers = Array.of_list 
         (List.map (
           fun x -> float_of_string (Str.matched_group x result)) [1;2;3;4]) in
         Some numbers
-      | _ -> None
+      | _ -> printf "*** NO PERPS! *** => %s\n" result; failwith "no perps"
 
-let rec third = function _::_::a::xs -> a::(third xs) | _ -> []  
-(* let third list = List.fold_left2 
-     (fun acc a i -> if i mod 3 = 0 then a::acc else acc) list (range (List.length list)) *)
+let rec fourth = function _::_::_::a::xs -> a::(fourth xs) | _ -> []  
+(* let each_nth n list = List.fold_left2 
+  (fun acc a i -> if i mod n = 0 then a::acc else acc) 
+  list (range (List.length list)) *)
 
+let three_fourths = function
+  | _::_::x::xs -> x::(fourth xs)
+  | _ -> failwith "bad ppl debug output"
+  
 let ppl_lines text =
+  (* printf "=====\n%s=====\n" text; flush stdout; *)
   let lines = Str.split (Str.regexp "\n") text in
-  let every3rd = third lines in
-  List.map ppl_stats every3rd 
+  let just_perps = three_fourths lines in
+  (* printf ">>>\n%s\n<<<\n" (String.concat "\n-----\n" just_perps); *)
+  List.map ppl_stats just_perps 
 
 (* echo "1 38 1 2 43 1 43" | ngram -lm mitr-wb-40.lm -debug 2 -ppl - *)
 (* file /Users/alexyk/cells/input/seq40: 1 sentences, 7 words, 0 OOVs
@@ -239,17 +247,18 @@ let evalm_serv date seqfile person_port =
 
 let evaportwalk f date person_ports seqfile =
   List.map (f date seqfile) person_ports
+  
   (*  [[(person1,date,stats11);(person1,date,stats12);...;(person1,date,stats1N)];
        [(person2,date,stats21);(person2,date,stats22);...;(person2,date,stats2N)];
        ...;
-       [(personM,date,statsM1);(personM,date,statsM2);...;(personM,date,statsMN)]];
+       [(personM,date,statsM1);(personM,date,statsM2);...;(personM,date,statsMN)]]
        
        transpose ->
-      [[(person1,date,stats11);...;(person2,date,stats21);...;(personM,date,statsM1)];
-       [(person1,date,stats12);...;(person2,date,stats22);...;(personM,date,statsM2)];
+         
+      [[(person1,date,stats11);(person2,date,stats21);...;(personM,date,statsM1)];
+       [(person1,date,stats12);(person2,date,stats22);...;(personM,date,statsM2)];
        ...;
-       [(person1,date,stats1N);...;(person2,date,stats2N);...;(personM,date,statsMN)];
-      ]
+       [(person1,date,stats1N);(person2,date,stats2N);...;(personM,date,statsMN)]]
    *)
 
 let evalm_link date seqfile person_client =
@@ -268,8 +277,10 @@ let evalaway_serv person_ports link date seqfile  =
     | _    -> evalm_serv in
   let vres = evaportwalk f date person_ports seqfile in
   let lres = transpose vres in 
-  sort_perp_lists lres (* converts result list list to list array from sorting *)
-
+  let lares = sort_perp_lists lres in (* converts result list list to list array from sorting *)
+  (* List.iter print_perps lares; *)
+  lares
+  
 let create_all_clients order person_ports =
   List.map (function person,port -> 
     let port's = sprintf "%d@localhost" port in

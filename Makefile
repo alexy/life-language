@@ -24,8 +24,13 @@ cellspans celltimes: %: %.cmo
 percells.cmo:
 	ocamlfind ocamlc $(PGOC_PKG) -c $< -o $@
 
+
 dataframe.cmo: %.cmo: %.ml
-	ocamlfind ocamlc -pp "camlp4o Camlp4MacroParser.cmo -DONT_USE_POSTGRES" -c $< -o $@
+	ocamlfind ocamlc   -pp "camlp4o Camlp4MacroParser.cmo -DONT_USE_POSTGRES" -c $< -o $@
+
+dataframe.cmx: %.cmx: %.ml
+	ocamlfind ocamlopt -pp "camlp4o Camlp4MacroParser.cmo -DONT_USE_POSTGRES" -c $< -o $@
+
 
 %.cmo: %.ml 
 	ocamlfind ocamlc -c $< -o $@
@@ -37,13 +42,17 @@ genlm: genlm.ml
 	ocamlfind ocamlc -package unix,str -linkpkg $< -o $@ 
 	
 evalm.cmo: evalm.ml
-	ocamlfind ocamlc -package unix,str -linkpkg $(LMCLIENT_A) -c $< -o $@ 
+	ocamlfind ocamlc   -package unix,str -linkpkg $(LMCLIENT_A) -c $< -o $@ 
 
-sample: evalm.cmo dataframe.cmo sample.ml
+evalm.cmx: evalm.ml
+	ocamlfind ocamlopt -package unix,str -linkpkg $(LMCLIENT_X) -c $< -o $@ 
+
+
+sample:    evalm.cmo dataframe.cmo sample.ml
 	 ocamlfind ocamlc $(DEBUG) -package unix,str,pcre -linkpkg $(LMCLIENT_A) -cclib -lstdc++ $(SRILM_CCLIB) -o $@ $^ 
 	
-samplebin: evalm.cmx samplebin.cmx
-	 ocamlfind ocamlopt -package str,unix,pcre -linkpkg  $(LMCLIENT_X) -cclib -lstdc++ $(SRILM_CCLIB) -o $@ $^
+samplebin: evalm.cmx dataframe.cmx sample.ml
+	 ocamlfind ocamlopt        -package str,unix,pcre -linkpkg $(LMCLIENT_X) -cclib -lstdc++ $(SRILM_CCLIB) -o $@ $^
 
 servctl: evalm.ml servctl.ml
 	 ocamlfind ocamlc -g -package str,unix,pcre -linkpkg -o $@ $(LMCLIENTA) $^
