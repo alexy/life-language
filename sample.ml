@@ -222,29 +222,6 @@ let ok_man ?(min=100) pput sample_len =
   in
   List.filter filter pput
 
-let percells_dataframe () =
-  printf "fetching dataframe from database\n";
-  let colnames,percells = Percells.fetch () in
-  let colnames = List.map (function | Some x -> x | None -> "") colnames in
-  let matrix = matrix_of_percells percells in
-  colnames,matrix
-  
-let save_dataframe dataframe filename =
-  let ob = open_out_bin filename in
-  Marshal.to_channel ob dataframe [];
-  close_out ob
-  
-let load_dataframe filename =
-  let ib = open_in_bin filename in
-  printf "loading dataframe from file %s\n" filename;
-  let ((colnames: string list), (matrix: int array array)) = Marshal.from_channel ib in
-  close_in ib;
-  colnames,matrix
-  
-let get_dataframe ?fromfile () =
-  match fromfile with
-  | Some file -> load_dataframe file
-  | None      -> percells_dataframe ()
   
 let pput dataframe from sample_len = 
   (* let from = Sys.argv.(1) in *)
@@ -368,23 +345,32 @@ let person_rank (oid:int) oids =
   let oids_nth = List.combine oids (range0 last) in
   List.assoc oid oids_nth
 
-let find_rank person_oid ares =
+let find_rank ?(infinite=1000) person_oid ares =
   (* Evalm.print_perps ares *)
   (* NB: instead of this, find in array via binary search! *)
   let lres = Array.to_list ares in
-  let rank = person_rank person_oid (List.map (function (x,_,_) -> x) lres) in
-  printf "person_oid %d => rank %d!\n" person_oid rank;
-  person_oid,rank
-
+  try begin
+    let rank = person_rank person_oid (List.map (function (x,_,_) -> x) lres) in
+    printf "person_oid %d => rank %d!\n" person_oid rank; flush stdout;
+    person_oid,rank
+  end
+  with Not_found -> begin printf "*** person_oid %d *** rank not found\n" person_oid;
+    printf "list: %s\n" (String.concat "," (List.map (fun (x,_,_) -> string_of_int x) lres));
+    person_oid,infinite (* a really big rank, bigger than for real *)
+  end
+  
+let find_ranks person_oid lares =
+  List.map (find_rank person_oid) lares
+  
 let rank_person_file cells from sample_list_filename person_oid =
   (* we'll keep the LM results as both array and list, for convenience *)
-  let ares = Evalm.evalaway_file cells (Some from) sample_list_filename in
-  find_rank person_oid ares
+  let lares = Evalm.evalaway_file cells (Some from) sample_list_filename in
+  find_ranks person_oid lares
 
 let rank_person_serv (person_ports: (int * int) list) (link:bool) (from:string) (sample_list_filename:string) (person_oid:int) =
   (* we'll keep the LM results as both array and list, for convenience *)
-  let ares = Evalm.evalaway_serv person_ports link from sample_list_filename in
-  find_rank person_oid ares
+  let lares = Evalm.evalaway_serv person_ports link from sample_list_filename in
+  find_ranks person_oid lares
   
 let rec take l n =
   let rec go l n acc =
@@ -395,7 +381,10 @@ let rec take l n =
   
   
 let print_results ?(oc=stdout) ranks =
-  List.iter (List.iter (function oid,rank -> fprintf oc "%d\t%d\n" oid rank)) ranks;
+  List.iter (* i -- each_person_runs *)
+    (List.iter (* batch -- several sequences per sample file *)
+      (List.iter (* rank for each person *)
+        (function oid,rank -> fprintf oc "%d\t%d\n" oid rank))) ranks;
   close_out oc
   
 let write_results ranks filename =
@@ -430,8 +419,8 @@ let () =
   | None -> 10 in
   let percells_file = elem_match argv "--matrix=(.*\\.bin)" in
   let dataframe = match percells_file with
-  | Some file -> get_dataframe ~fromfile:file ()
-  | None      -> get_dataframe () in
+  | Some file -> Dataframe.get ~fromfile:file ()
+  | None      -> Dataframe.get () in
   let each_person_runs = match (elem_match argv "--runs=(\\d+)") with
   | Some runs -> int_of_string runs
   | None -> 1 in
@@ -486,29 +475,27 @@ let () =
   | None -> eligible in
   
   let ranks = List.map
-  (fun person -> List.map 
-    (fun i ->
-      let i's = string_of_int i in
-      let oid   = person_oid person in
-      let oid's = string_of_int oid in
-      let starts = pick_starts sample_len person batch in
-      let observed = samples from sample_len person starts in
-      let case_suffix = "_p"^oid's
-        ^ ( if each_person_runs > 1 then "-"^i's else "") in
-      let case_list_filename = sample_list_filename ^ case_suffix in
-      let case_info_filename = sample_info_filename ^ case_suffix in
-      write_int_lists (sample_cells_list observed) case_list_filename;
-      write_samples   observed from                case_info_filename;
+    (fun person -> List.map 
+      (fun i ->
+        (* printf "runs: i => %d\n" i; *)
+        let i's = string_of_int i in
+        let oid   = person_oid person in
+        let oid's = string_of_int oid in
+        let starts = pick_starts sample_len person batch in
+        let observed = samples from sample_len person starts in
+        let case_suffix = "_p"^oid's
+          ^ ( if each_person_runs > 1 then "-"^i's else "") in
+        let case_list_filename = sample_list_filename ^ case_suffix in
+        let case_info_filename = sample_info_filename ^ case_suffix in
+        write_int_lists (sample_cells_list observed) case_list_filename;
+        write_samples   observed from                case_info_filename;
       
-      if using_servers then
-        rank_person_serv person_ports link from case_list_filename oid
-      else
-        rank_person_file cells from             case_list_filename oid
-        
-      ) (* fun i *)
-      
-        (range each_person_runs))
-      some_people
+        if using_servers then
+          rank_person_serv person_ports link from case_list_filename oid
+        else
+          rank_person_file cells from             case_list_filename oid) 
+      (range each_person_runs))
+    some_people
   in
   
   print_results ranks;

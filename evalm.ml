@@ -13,40 +13,53 @@ let read_process command =
   ignore (Unix.close_process_in in_channel);
   Buffer.contents buffer
 
+
+let ppl_stats result = 
+    match Str.string_match (Str.regexp
+      (* "[^\n]+\n" -- for single-list file and the full pplFile return of stats *)
+      "\\([0-9]+\\) zeroprobs, logprob= \\([0-9.-]+\\) ppl= \\([0-9.]+\\) ppl1= \\([0-9.]+\\)") 
+      result 0 with 
+      | true ->
+        let numbers = Array.of_list 
+        (List.map (
+          fun x -> float_of_string (Str.matched_group x result)) [1;2;3;4]) in
+        Some numbers
+      | _ -> None
+
+let rec third = function _::_::a::xs -> a::(third xs) | _ -> []  
+(* let third list = List.fold_left2 
+     (fun acc a i -> if i mod 3 = 0 then a::acc else acc) list (range (List.length list)) *)
+
+let ppl_lines text =
+  let lines = Str.split (Str.regexp "\n") text in
+  let every3rd = third lines in
+  List.map ppl_stats every3rd 
+
 (* echo "1 38 1 2 43 1 43" | ngram -lm mitr-wb-40.lm -debug 2 -ppl - *)
 (* file /Users/alexyk/cells/input/seq40: 1 sentences, 7 words, 0 OOVs
    0 zeroprobs, logprob= -9.10564 ppl= 13.7469 ppl1= 19.9897 *)
 let evalm_file dir ?date seqfile =
   let person's = Filename.basename dir in
-  let (person'date, date's) = 
+  let person'date, date's = 
     match date with 
-      | Some date -> (person's^"-"^date, date)
-      | None -> (person's,"") 
+      | Some date -> person's^"-"^date, date
+      | None -> person's, ""
       in
   let lm = sprintf "%s/mitr-wb5-%s.lm" dir person'date in
-  let stats =
-    if Sys.file_exists lm then begin
-        let command = sprintf "ngram -lm %s -ppl %s" lm seqfile in
-        (* print_endline command; *)
-        output_string stdout "."; flush stdout;
-        let result = read_process command in
-        (* print_endline result *)
-        match Str.string_match (Str.regexp 
-          "[^\n]+\n\\([0-9]+\\) zeroprobs, logprob= \\([0-9.-]+\\) ppl= \\([0-9.]+\\) ppl1= \\([0-9.]+\\)") 
-          result 0 with 
-          | true ->
-            let numbers = Array.of_list 
-            (List.map (
-              fun x -> float_of_string (Str.matched_group x result)) [1;2;3;4]) in
-            Some numbers
-          | _ -> None
-      end else
-        None
-    in (* stats *)
-      int_of_string person's, date's, stats
+  if Sys.file_exists lm then begin
+      let person = int_of_string person's in
+      let command = sprintf "ngram -lm %s -debug 1 -ppl %s" lm seqfile in
+      (* print_endline command; *)
+      output_string stdout "."; flush stdout;
+      let result = read_process command in
+      (* print_endline result *)
+      let stats_list = ppl_lines result in
+      List.map (fun stats -> person, date's, stats) stats_list
+  end
+  else []
 
 
-let evadirwalk (f:string -> ?date:string -> string -> int * string * float array option) ?date root seqfile =
+let evadirwalk (f:string -> ?date:string -> string -> (int * string * float array option) list) ?date root seqfile =
   let numbers = Str.regexp "^[0-9]+$" in
   let subdirs = Array.to_list (Sys.readdir root) in
   let subdirs = List.filter (fun x -> Str.string_match numbers x 0 && x <> "0") subdirs in
@@ -83,13 +96,21 @@ let sort_perps l =
   let a = Array.of_list l in
   Array.sort compare_perps a;
   a
+
+let sort_perp_lists lili =
+  List.map sort_perps lili
+    
+let rec transpose = function 
+  | []::_ -> [] 
+  | list -> List.map List.hd list :: transpose (List.map List.tl list)
   
 let evalaway_file cells date seqfile  =
-  let lres = match date with
+  let vres = match date with
     | Some date's -> evadirwalk evalm_file cells ~date:date's seqfile
     | None        -> evadirwalk evalm_file cells seqfile
   in
-  sort_perps lres (* converts result list to array for sorting *)
+  let lres = transpose vres in 
+  sort_perp_lists lres (* converts result list to array for sorting *)
   
 let print_perps ares =
   print_endline ""; (* after the progress dots *)
@@ -203,27 +224,6 @@ let read_ppp filename =
   in
   go ic []
   
-
-let ppl_stats result = 
-    match Str.string_match (Str.regexp
-      (* "[^\n]+\n" -- for single-list file and the full pplFile return of stats *)
-      "\\([0-9]+\\) zeroprobs, logprob= \\([0-9.-]+\\) ppl= \\([0-9.]+\\) ppl1= \\([0-9.]+\\)") 
-      result 0 with 
-      | true ->
-        let numbers = Array.of_list 
-        (List.map (
-          fun x -> float_of_string (Str.matched_group x result)) [1;2;3;4]) in
-        Some numbers
-      | _ -> None
-  
-let rec third = function _::_::a::xs -> a::(third xs) | _ -> []  
-(* let third list = List.fold_left2 
-     (fun acc a i -> if i mod 3 = 0 then a::acc else acc) list (range (List.length list)) *)
-
-let ppl_lines text =
-  let lines = Str.split (Str.regexp "\n") text in
-  let every3rd = third lines in
-  List.map ppl_stats every3rd 
   
 let evalm_serv date seqfile person_port =
   let person,port = person_port in
@@ -238,10 +238,19 @@ let evalm_serv date seqfile person_port =
       
 
 let evaportwalk f date person_ports seqfile =
-  let lili = List.map  (f date seqfile) person_ports in
-  (* now, merge all lists *)
-  (* List.gold_left List.append [] <=> List.concat *)
-  List.concat lili
+  List.map (f date seqfile) person_ports
+  (*  [[(person1,date,stats11);(person1,date,stats12);...;(person1,date,stats1N)];
+       [(person2,date,stats21);(person2,date,stats22);...;(person2,date,stats2N)];
+       ...;
+       [(personM,date,statsM1);(personM,date,statsM2);...;(personM,date,statsMN)]];
+       
+       transpose ->
+      [[(person1,date,stats11);...;(person2,date,stats21);...;(personM,date,statsM1)];
+       [(person1,date,stats12);...;(person2,date,stats22);...;(personM,date,statsM2)];
+       ...;
+       [(person1,date,stats1N);...;(person2,date,stats2N);...;(personM,date,statsMN)];
+      ]
+   *)
 
 let evalm_link date seqfile person_client =
   let person,client = person_client in
@@ -251,13 +260,15 @@ let evalm_link date seqfile person_client =
   let stats_list = ppl_lines result in
   List.map (fun stats ->
   person, date, stats) stats_list
+  (*  [(personX,date,statsX1);(personX,date,statsX2);...;(personX,date,statsXN)] *)
 
 let evalaway_serv person_ports link date seqfile  =
   let f = match link with
     | true -> evalm_link
     | _    -> evalm_serv in
-  let lres = evaportwalk f date person_ports seqfile in
-  sort_perps lres (* converts result list to array for sorting *)
+  let vres = evaportwalk f date person_ports seqfile in
+  let lres = transpose vres in 
+  sort_perp_lists lres (* converts result list list to list array from sorting *)
 
 let create_all_clients order person_ports =
   List.map (function person,port -> 
