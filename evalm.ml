@@ -1,4 +1,5 @@
 open Printf
+open Lmclass
 
 let read_process command =
   let buffer_size = 2048 in
@@ -263,7 +264,7 @@ let evaportwalk f date person_ports seqfile =
 
 let evalm_link date seqfile person_client =
   let person,client = person_client in
-  let result = Lmclient.compute client seqfile in
+  let result = client#compute seqfile in
   (* print_endline result; *)
   output_string stdout "."; flush stdout;
   let stats_list = ppl_lines result in
@@ -274,7 +275,8 @@ let evalm_link date seqfile person_client =
 let evalaway_serv person_ports link date seqfile  =
   let f = match link with
     | true -> evalm_link
-    | _    -> evalm_serv in
+    | _    -> failwith "objects superceded evalm_serv" (* evalm_serv *) 
+    in
   let vres = evaportwalk f date person_ports seqfile in
   let lres = transpose vres in 
   let lares = sort_perp_lists lres in (* converts result list list to list array from sorting *)
@@ -284,12 +286,11 @@ let evalaway_serv person_ports link date seqfile  =
 let create_all_clients order person_ports =
   List.map (function person,port -> 
     let port's = sprintf "%d@localhost" port in
-    let client = Lmclient.create port's order in
-    (* if client < 0 then failwith "coulnd't create client" else (); *)
-    assert (client >= 0);
+    let client =  new lmclient port's order in
+    assert (client#int_handle > 0);
     person,client) person_ports
     
 let destroy_all_clients person_clients =
   let clients = List.map snd person_clients in
   let backwards = List.rev clients in
-  List.iter (fun client -> assert ((Lmclient.destroy client) >= 0)) backwards
+  List.iter (fun client -> assert (client#destroy >= 0)) backwards

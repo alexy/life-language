@@ -367,7 +367,7 @@ let rank_person_file cells from sample_list_filename person_oid =
   let lares = Evalm.evalaway_file cells (Some from) sample_list_filename in
   find_ranks person_oid lares
 
-let rank_person_serv (person_ports: (int * int) list) (link:bool) (from:string) (sample_list_filename:string) (person_oid:int) =
+let rank_person_serv person_ports link from sample_list_filename person_oid =
   (* we'll keep the LM results as both array and list, for convenience *)
   let lares = Evalm.evalaway_serv person_ports link from sample_list_filename in
   find_ranks person_oid lares
@@ -436,7 +436,7 @@ let () =
                        let pp = List.map (function x,y,_ -> x,y) ppp in
                        match link with
                        | true -> Evalm.create_all_clients order pp
-                       | _    -> pp end
+                       | _    -> failwith "need clients" (* pp *) end
     | None          -> []
   in
   let using_what = if using_servers 

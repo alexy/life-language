@@ -5,7 +5,7 @@ CMO      :=.cmo
 ML       :=.ml
 
 DEBUG=-g
-LMCLIENT_A = -I crilm crilm/lmclient.cma
+LMCLIENT_A = -I crilm crilm/lmclient.cma crilm/lmclass.cmo
 LMCLIENT_X = -I crilm crilm/lmclient.cmxa
 # compile SRILM with Makefile.machine.macosx, commenting out
 # TCL_{INCLUDE,LIBRARY} and adding a line:
@@ -30,7 +30,7 @@ dataframe.cmo: %.cmo: %.ml
 
 dataframe.cmx: %.cmx: %.ml
 	ocamlfind ocamlopt -pp "camlp4o Camlp4MacroParser.cmo -DONT_USE_POSTGRES" -c $< -o $@
-
+ 
 
 %.cmo: %.ml 
 	ocamlfind ocamlc -c $< -o $@
@@ -55,7 +55,7 @@ samplebin: evalm.cmx dataframe.cmx sample.ml
 	 ocamlfind ocamlopt        -package str,unix,pcre -linkpkg $(LMCLIENT_X) -cclib -lstdc++ $(SRILM_CCLIB) -o $@ $^
 
 servctl: evalm.ml servctl.ml
-	 ocamlfind ocamlc -g -package str,unix,pcre -linkpkg -o $@ $(LMCLIENTA) $^
+	 ocamlfind ocamlc -g -package str,unix,pcre -linkpkg $(LMCLIENT_A) -cclib -lstdc++ $(SRILM_CCLIB) -o $@ $^
 	
 clean:
 	rm -f $(PROJECT) $(PROJECT).cmo
