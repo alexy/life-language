@@ -22,6 +22,12 @@ let () =
     *)
   printf "handles for the lm list are in fact: ";
   print_endline (String.concat ", " (List.map (fun lm -> string_of_int lm#int_handle) lms));
+
+  let lm0 = List.hd lms in
+  let sentence = lm0#complete_sentence 10 ["1";"2";"3"] in
+  let sentence's = String.concat " " sentence in
+  printf "sentence => %s\n" sentence's;
+  
   List.iter (fun lm ->
     let num = lm#destroy in
     printf "num = %d\n" num) (List.rev lms)

@@ -12,3 +12,5 @@ external  int_of_handle : handle -> int        = "lmclient_int_of_handle"
 external  create  : string -> int -> handle    = "lmclient_create"
 external  destroy : handle -> int              = "lmclient_destroy"
 external  compute : handle -> string -> string = "lmclient_compute"
+
+external  complete_sentence : handle -> int -> string array -> string array = "lmclient_complete_sentence"

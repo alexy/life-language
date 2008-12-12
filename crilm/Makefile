@@ -9,14 +9,19 @@ STUBS=$(MOD)_stubs
 
 all: byte bin
 
-$(STUBS).o: $(STUBS).c
+generate.o: generate.cc
+	g++ $(SRILM_INC) -o $@ -c $<
+
+stubs: $(STUBS).o
+	
+$(STUBS).o: $(STUBS).c generate.h
 	g++ $(SRILM_INC) -I`ocamlc -where` -o $@ -c $<
 
 $(CLASS).cmo: $(CLASS).ml $(MOD).cmo
 	ocamlc -c $^ -o $@
 	
-dll$(MOD).so: $(STUBS).o
-	ocamlmklib -lstdc++ $(SRILM_LIB) -o $(MOD) $<
+dll$(MOD).so: $(STUBS).o generate.o
+	ocamlmklib -lstdc++ $(SRILM_LIB) generate.o -o $(MOD) $<
 
 $(MOD).cmo: $(MOD).ml $(STUBS).o
 	ocamlc -c $< -o $@
@@ -26,7 +31,7 @@ $(MOD).cma: $(MOD).cmo
 	
 	
 byte: dll$(MOD).so $(MOD).cma lmclass.cmo calm.ml
-	ocamlc -I .  $(MOD).cma lmclass.cmo calm.ml -o calm
+	ocamlc -I . $(MOD).cma lmclass.cmo calm.ml -o calm
 
 bin: $(STUBS).o
 	ocamlmklib -o $(MOD) -lstdc++ $(SRILM_LIB) $(STUBS).o
