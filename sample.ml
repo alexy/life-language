@@ -1,6 +1,7 @@
 (* #require "pgocaml"
 #load "percells.cmo" *)
 open Printf
+open Baseclient
 
 (* initially I thought I'd need to revert a buffer
   to parse a string into a number; in fact not,
@@ -407,6 +408,12 @@ let elem_match list regex's =
   
 let yes_no = function | true -> "yes" | _ -> "no"
 
+(* NB: we have to BOTH provide upclass coercion below AND in evalm when creating person_ports lists! 
+  Check this and try to relax...
+  *)
+let upperclass_clients =
+  List.map (function port,client -> (port, (client :> baseclient)))
+
 let () =
   let argv = Array.to_list Sys.argv in
   let order = 5 in (* parameterize *)
@@ -435,8 +442,9 @@ let () =
     | Some filename -> begin let ppp = Evalm.read_ppp filename in 
                        let pp = List.map (function x,y,_ -> x,y) ppp in
                        match link with
-                       | true -> Evalm.create_all_clients order pp
-                       | _    -> failwith "need clients" (* pp *) end
+                       | true -> upperclass_clients (Evalm.create_all_clients  order pp)
+                       | _    -> upperclass_clients (Evalm.create_all_commands from_opt order pp)
+                       end
     | None          -> []
   in
   let using_what = if using_servers 
@@ -474,8 +482,12 @@ let () =
   | Some few -> take eligible (int_of_string few)
   | None -> eligible in
   
-  let ranks = List.map
-    (fun person -> List.map 
+  let ranks = 
+    List.map
+    (* Parmap.par_map  *)
+    (fun person -> 
+      List.map 
+      (* Parmap.par_map  *)
       (fun i ->
         (* printf "runs: i => %d\n" i; *)
         let i's = string_of_int i in

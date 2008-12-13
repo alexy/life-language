@@ -1,19 +1,7 @@
 open Printf
 open Lmclass
-
-let read_process command =
-  let buffer_size = 2048 in
-  let buffer = Buffer.create buffer_size in
-  let string = String.create buffer_size in
-  let in_channel = Unix.open_process_in command in
-  let chars_read = ref 1 in
-  while !chars_read <> 0 do
-    chars_read := input in_channel string 0 buffer_size;
-    Buffer.add_substring buffer string 0 !chars_read
-  done;
-  ignore (Unix.close_process_in in_channel);
-  Buffer.contents buffer
-
+open Clclass
+open Baseclient
 
 let ppl_stats result = 
     match Str.string_match (Str.regexp
@@ -60,7 +48,7 @@ let evalm_file dir ?date seqfile =
       let command = sprintf "ngram -lm %s -debug 1 -ppl %s" lm seqfile in
       (* print_endline command; *)
       output_string stdout "."; flush stdout;
-      let result = read_process command in
+      let result = Process.read command in
       (* print_endline result *)
       let stats_list = ppl_lines result in
       List.map (fun stats -> person, date's, stats) stats_list
@@ -233,19 +221,6 @@ let read_ppp filename =
   in
   go ic []
   
-  
-let evalm_serv date seqfile person_port =
-  let person,port = person_port in
-  let command = sprintf "ngram -use-server %d@localhost -ppl %s" port seqfile in
-  (* print_endline command; *)
-  let result = read_process command in
-  (* print_endline result; *)
-  output_string stdout "."; flush stdout;
-  let stats_list = ppl_lines result in
-  List.map (fun stats ->
-  person, date, stats) stats_list
-      
-
 let evaportwalk f date person_ports seqfile =
   List.map (f date seqfile) person_ports
   
@@ -263,7 +238,8 @@ let evaportwalk f date person_ports seqfile =
    *)
 
 let evalm_link date seqfile person_client =
-  let person,client = person_client in
+  let person,client= person_client in
+  let client = (client :> baseclient) in
   let result = client#compute seqfile in
   (* print_endline result; *)
   output_string stdout "."; flush stdout;
@@ -273,14 +249,11 @@ let evalm_link date seqfile person_client =
   (*  [(personX,date,statsX1);(personX,date,statsX2);...;(personX,date,statsXN)] *)
 
 let evalaway_serv person_ports link date seqfile  =
-  let f = match link with
-    | true -> evalm_link
-    | _    -> failwith "objects superceded evalm_serv" (* evalm_serv *) 
-    in
+  let f = evalm_link (* supposedly the same link or not! *)
+  in
   let vres = evaportwalk f date person_ports seqfile in
   let lres = transpose vres in 
-  let lares = sort_perp_lists lres in (* converts result list list to list array from sorting *)
-  (* List.iter print_perps lares; *)
+  let lares = sort_perp_lists lres in
   lares
   
 let create_all_clients order person_ports =
@@ -288,9 +261,37 @@ let create_all_clients order person_ports =
     let port's = sprintf "%d@localhost" port in
     let client =  new lmclient port's order in
     assert (client#int_handle > 0);
-    person,client) person_ports
+      (* NB: we're forced to upclass here, in sample is not enough -- 
+        despite upperclass_clients -- let's try to relax that! *)
+    person,(client :> baseclient)) person_ports
     
 let destroy_all_clients person_clients =
   let clients = List.map snd person_clients in
   let backwards = List.rev clients in
   List.iter (fun client -> assert (client#destroy >= 0)) backwards
+
+let cells = "/Users/alexyk/cells"
+
+let person_dir person's =
+  Filename.concat cells person's
+
+let person_lm person's date'suffix =
+  let dir = person_dir person's in
+  let lm = sprintf "%s/mitr-wb5-%s%s.lm" dir person's date'suffix in
+  lm
+  
+let create_all_commands date order person_ports =
+  let date'suffix = 
+    match date with 
+      | Some date -> "-"^date
+      | None -> ""
+      in
+  List.fold_left (fun acc (person,port) -> 
+    let person's = string_of_int person in
+    let lm = person_lm person's date'suffix in
+    if Sys.file_exists lm then
+      let client = new clclient person port order lm in
+        (* NB: we're forced to upclass here, in sample is not enough -- 
+          despite upperclass_clients -- let's try to relax that! *)
+      (person,(client :> baseclient))::acc
+    else acc) [] person_ports

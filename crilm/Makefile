@@ -5,7 +5,9 @@ SRILM_CCLIB=-cclib -L$(SRILM)/lib/macosx -cclib '-loolm -lmisc -ldstruct' -cclib
 
 MOD=lmclient
 CLASS=lmclass
+BASECLASS_INC=-I ..
 STUBS=$(MOD)_stubs
+BYTES=$(MOD).cma lmclass.cmo calm.ml
 
 all: byte bin
 
@@ -17,26 +19,33 @@ stubs: $(STUBS).o
 $(STUBS).o: $(STUBS).c generate.h
 	g++ $(SRILM_INC) -I`ocamlc -where` -o $@ -c $<
 
-$(CLASS).cmo: $(CLASS).ml $(MOD).cmo
-	ocamlc -c $^ -o $@
+$(CLASS).cmo: $(CLASS).ml $(BASECLASS_INC) $(MOD).cmo
+	ocamlfind ocamlc -c $^ -o $@
+
+$(CLASS).cmx: $(CLASS).ml $(BASECLASS_INC) $(MOD).cmx
+	ocamlfind ocamlopt -c $^ -o $@
 	
 dll$(MOD).so: $(STUBS).o generate.o
-	ocamlmklib -lstdc++ $(SRILM_LIB) generate.o -o $(MOD) $<
+	ocamlmklib -lstdc++ $(SRILM_LIB) $^ -o $(MOD)
 
 $(MOD).cmo: $(MOD).ml $(STUBS).o
 	ocamlc -c $< -o $@
+
+$(MOD).cmx: $(MOD).ml $(STUBS).o
+	ocamlmklib -lstdc++ $(SRILM_LIB) $^ -o $(MOD)
 	
 $(MOD).cma: $(MOD).cmo
 	ocamlmklib -o $(MOD) $(MOD).cmo
-	
-	
-byte: dll$(MOD).so $(MOD).cma lmclass.cmo calm.ml
-	ocamlc -I . $(MOD).cma lmclass.cmo calm.ml -o calm
 
-bin: $(STUBS).o
-	ocamlmklib -o $(MOD) -lstdc++ $(SRILM_LIB) $(STUBS).o
+$(MOD).cmxa: $(MOD).cmx	
 	ocamlmklib -o $(MOD) $(MOD).cmx
-	ocamlfind ocamlopt -I . -cclib -lstdc++ $(SRILM_CCLIB) $(MOD).cmxa calm.ml -o calmbin
+	
+	
+byte: dll$(MOD).so $(BYTES)
+	ocamlfind ocamlc -I . $(BYTES) -o calm
+
+bin: $(MOD).cmxa generate.o lmclass.cmx calm.ml
+	ocamlfind ocamlopt -I . -cclib -lstdc++ $(SRILM_CCLIB) $^ -o calmbin
 
 do:
 	ocamlopt lmclient.cmx $(CC_LIB)
@@ -45,4 +54,3 @@ start-servers:
 	 cd ~/cells
 	 ngram -lm 1/mitr-wb5-3-2004-10-01.lm -order 5 -server-port 10101 &
 	 ngram -lm 3/mitr-wb5-3-2004-10-01.lm -order 5 -server-port 10103 &
-	

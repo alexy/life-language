@@ -5,13 +5,14 @@ CMO      :=.cmo
 ML       :=.ml
 
 DEBUG=-g
-LMCLIENT_A = -I crilm crilm/lmclient.cma crilm/lmclass.cmo
-LMCLIENT_X = -I crilm crilm/lmclient.cmxa
+LMCLASS_A  = crilm/lmclass.cmo
+LMCLIENT_A = -I crilm crilm/lmclient.cma 
+LMCLIENT_X = -I crilm crilm/lmclient.cmxa crilm/lmclass.cmx crilm/generate.o
 # compile SRILM with Makefile.machine.macosx, commenting out
 # TCL_{INCLUDE,LIBRARY} and adding a line:
 # NO_TCL=yes
 SRILM=/s/src/srilm/current
-SRILM_CCLIB=-cclib -L$(SRILM)/lib/macosx -cclib '-loolm -lmisc -ldstruct' -cclib -lm
+SRILM_CCLIB=-cclib -L$(SRILM)/lib/macosx -cclib '-loolm -lmisc -ldstruct' -cclib -lm crilm/generate.o
 
 # comment this out to compile without pgocaml available:
 USE_POSTGRES=-DUSE_POSTGRES
@@ -33,29 +34,35 @@ dataframe.cmx: %.cmx: %.ml
  
 
 %.cmo: %.ml 
-	ocamlfind ocamlc -c $< -o $@
+	ocamlfind ocamlc   -c $< -o $@
 	
 %.cmx: %.ml
-	ocamlfind ocamlopt -package $(COMP_PKG) -syntax camlp4o -c $< -o $@
+	ocamlfind ocamlopt -c $< -o $@
 	
 genlm: genlm.ml
 	ocamlfind ocamlc -package unix,str -linkpkg $< -o $@ 
 	
-evalm.cmo: evalm.ml
+evalm.cmo: evalm.ml process.cmo clclass.cmo
 	ocamlfind ocamlc   -package unix,str -linkpkg $(LMCLIENT_A) -c $< -o $@ 
 
-evalm.cmx: evalm.ml
+evalm.cmx: evalm.ml process.cmx clclass.cmo
 	ocamlfind ocamlopt -package unix,str -linkpkg $(LMCLIENT_X) -c $< -o $@ 
 
 
-sample:    evalm.cmo dataframe.cmo sample.ml
-	 ocamlfind ocamlc $(DEBUG) -package unix,str,pcre -linkpkg $(LMCLIENT_A) -cclib -lstdc++ $(SRILM_CCLIB) -o $@ $^ 
+sample: parmap.cmo dataframe.cmo baseclient.cmo process.cmo clclass.cmo $(LMCLASS_A) evalm.cmo sample.ml
+	 ocamlfind ocamlc $(DEBUG) -package unix,str,pcre -linkpkg $^ $(LMCLIENT_A) -cclib -lstdc++ $(SRILM_CCLIB) -o $@ 
 	
-samplebin: evalm.cmx dataframe.cmx sample.ml
+samplebin: evalm.cmx parmap.cmx dataframe.cmx sample.ml
 	 ocamlfind ocamlopt        -package str,unix,pcre -linkpkg $(LMCLIENT_X) -cclib -lstdc++ $(SRILM_CCLIB) -o $@ $^
 
 servctl: evalm.ml servctl.ml
 	 ocamlfind ocamlc -g -package str,unix,pcre -linkpkg $(LMCLIENT_A) -cclib -lstdc++ $(SRILM_CCLIB) -o $@ $^
+	
+parmap.cmo: parmap.ml
+	 ocamlfind ocamlc -package unix,pcre -o $@ -c $^
+
+parmap.cmx: parmap.ml
+	 ocamlfind ocamlopt -package unix,pcre -o $@ -c $^
 	
 clean:
 	rm -f $(PROJECT) $(PROJECT).cmo

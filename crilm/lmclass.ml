@@ -1,5 +1,9 @@
+open Baseclient
+
 class lmclient (port: string) (order: int) =
 object (self)
+inherit baseclient
+
   val mutable handle = Lmclient.null ()
   val mutable handle_i = 0
   
