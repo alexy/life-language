@@ -1,6 +1,7 @@
 open Printf
 open Lmclass
 open Clclass
+open Syclass
 open Baseclient
 
 let ppl_stats result = 
@@ -280,18 +281,26 @@ let person_lm person's date'suffix =
   let lm = sprintf "%s/mitr-wb5-%s%s.lm" dir person's date'suffix in
   lm
   
-let create_all_commands date order person_ports =
+let create_all_commands date order persons =
   let date'suffix = 
     match date with 
       | Some date -> "-"^date
       | None -> ""
       in
-  List.fold_left (fun acc (person,port) -> 
+  List.fold_left (fun acc person -> 
     let person's = string_of_int person in
     let lm = person_lm person's date'suffix in
     if Sys.file_exists lm then
-      let client = new clclient person port order lm in
+      let client = new clclient person order lm in
         (* NB: we're forced to upclass here, in sample is not enough -- 
           despite upperclass_clients -- let's try to relax that! *)
       (person,(client :> baseclient))::acc
-    else acc) [] person_ports
+    else acc) [] persons
+
+let create_all_systems order person_ports =
+  List.map (function person,port -> 
+    let client =  new syclient person port order in
+      (* NB: we're forced to upclass here, in sample is not enough -- 
+        despite upperclass_clients -- let's try to relax that! *)
+    person,(client :> baseclient)) person_ports
+  

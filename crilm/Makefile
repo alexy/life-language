@@ -19,11 +19,11 @@ stubs: $(STUBS).o
 $(STUBS).o: $(STUBS).c generate.h
 	g++ $(SRILM_INC) -I`ocamlc -where` -o $@ -c $<
 
-$(CLASS).cmo: $(CLASS).ml $(BASECLASS_INC) $(MOD).cmo
-	ocamlfind ocamlc -c $^ -o $@
+$(CLASS).cmo: $(CLASS).ml $(MOD).cmo
+	ocamlfind ocamlc -c $(BASECLASS_INC) $^ -o $@
 
-$(CLASS).cmx: $(CLASS).ml $(BASECLASS_INC) $(MOD).cmx
-	ocamlfind ocamlopt -c $^ -o $@
+$(CLASS).cmx: $(CLASS).ml $(MOD).cmx
+	ocamlfind ocamlopt -c $(BASECLASS_INC) $^ -o $@
 	
 dll$(MOD).so: $(STUBS).o generate.o
 	ocamlmklib -lstdc++ $(SRILM_LIB) $^ -o $(MOD)

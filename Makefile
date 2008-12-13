@@ -42,14 +42,14 @@ dataframe.cmx: %.cmx: %.ml
 genlm: genlm.ml
 	ocamlfind ocamlc -package unix,str -linkpkg $< -o $@ 
 	
-evalm.cmo: evalm.ml process.cmo clclass.cmo
+evalm.cmo: evalm.ml process.cmo clclass.cmo syclass.cmo
 	ocamlfind ocamlc   -package unix,str -linkpkg $(LMCLIENT_A) -c $< -o $@ 
 
-evalm.cmx: evalm.ml process.cmx clclass.cmo
+evalm.cmx: evalm.ml process.cmx clclass.cmo syclass.cmo
 	ocamlfind ocamlopt -package unix,str -linkpkg $(LMCLIENT_X) -c $< -o $@ 
 
 
-sample: parmap.cmo dataframe.cmo baseclient.cmo process.cmo clclass.cmo $(LMCLASS_A) evalm.cmo sample.ml
+sample: parmap.cmo dataframe.cmo baseclient.cmo process.cmo clclass.cmo syclass.cmo $(LMCLASS_A) evalm.cmo sample.ml
 	 ocamlfind ocamlc $(DEBUG) -package unix,str,pcre -linkpkg $^ $(LMCLIENT_A) -cclib -lstdc++ $(SRILM_CCLIB) -o $@ 
 	
 samplebin: evalm.cmx parmap.cmx dataframe.cmx sample.ml

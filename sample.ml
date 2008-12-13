@@ -443,9 +443,11 @@ let () =
                        let pp = List.map (function x,y,_ -> x,y) ppp in
                        match link with
                        | true -> upperclass_clients (Evalm.create_all_clients  order pp)
-                       | _    -> upperclass_clients (Evalm.create_all_commands from_opt order pp)
+                       | _    -> upperclass_clients (Evalm.create_all_systems order pp)
                        end
-    | None          -> []
+                       (* the range below can be obtained from examining cells/ *)
+    | None          -> upperclass_clients (Evalm.create_all_commands from_opt order (range 100))
+
   in
   let using_what = if using_servers 
   then sprintf "servers (from %s), clients = %s" (unsome ppp_opt) (yes_no link)
@@ -483,8 +485,8 @@ let () =
   | None -> eligible in
   
   let ranks = 
-    List.map
-    (* Parmap.par_map  *)
+    (* List.map *)
+    Parmap.par_map 
     (fun person -> 
       List.map 
       (* Parmap.par_map  *)
@@ -502,10 +504,11 @@ let () =
         write_int_lists (sample_cells_list observed) case_list_filename;
         write_samples   observed from                case_info_filename;
       
-        if using_servers then
-          rank_person_serv person_ports link from case_list_filename oid
-        else
-          rank_person_file cells from             case_list_filename oid) 
+        (* if using_servers then -- now we unified it all with client classes! *)
+        rank_person_serv person_ports link from case_list_filename oid
+        (* else -- can still uncomment and use the below for testing:
+              rank_person_file cells from case_list_filename oid *)
+        ) 
       (range each_person_runs))
     some_people
   in
