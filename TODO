@@ -1,0 +1,17 @@
+Method Improvement
+
+-- run the same samples on a series of models before them, 
+and include the tuples in overall ranking, since we allow
+for distinct date in (person,date,perps)
+
+-- try ngrams of different orders
+
+-- try different smoothing methods
+
+-- predict
+   for a prefix, generate possible suffixes, and measure the end cloud
+
+-- change
+   for two LMs, compare predicted clouds
+   or measure KL divergence
+
