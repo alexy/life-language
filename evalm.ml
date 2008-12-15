@@ -227,8 +227,15 @@ let read_ppp filename =
   in
   go ic []
   
+let evalm_sem = Semaphore.create 1
+
 let evaportwalk f date person_ports seqfile =
-  List.map (f date seqfile) person_ports
+  List.map (fun pp -> 
+    Semaphore.lock evalm_sem;
+    let res = f date seqfile pp in
+    Semaphore.unlock evalm_sem;
+    res
+    ) person_ports
   
   (*  [[(person1,date,stats11);(person1,date,stats12);...;(person1,date,stats1N)];
        [(person2,date,stats21);(person2,date,stats22);...;(person2,date,stats2N)];
@@ -245,21 +252,30 @@ let evaportwalk f date person_ports seqfile =
 
 let evalm_link date seqfile person_client =
   let person,client= person_client in
+  printf "\n###===>>> (evalm_link) :: %s ### person %d\n" seqfile person;
   let client = (client :> baseclient) in
+  client#lock;
   let result = client#compute seqfile in
+  printf "\n!!! <<< RESULT LENGTH==[[%d]]<<< (evalm_link) :: %s ### person %d\n" (String.length result) seqfile person;
   (* print_endline result; *)
-  output_string stdout "."; flush stdout;
+  (* output_string stdout "."; flush stdout; *)
   let stats_list = ppl_lines result in
-  List.map (fun stats ->
-  person, date, stats) stats_list
+  printf "\n+++ <<< STATS <<< (evalm_link) :: %s ### person %d\n" seqfile person;
+  let res = List.map (fun stats ->
+  person, date, stats) stats_list in
+  printf "\n###<<<=== (evalm_link) :: %s ### person %d\n" seqfile person;
+  client#unlock;
+  res
   (*  [(personX,date,statsX1);(personX,date,statsX2);...;(personX,date,statsXN)] *)
 
 let evalaway_serv person_ports link date seqfile  =
+  printf "\n=====> [evalaway_serv] :: %s\n" seqfile;
   let f = evalm_link (* supposedly the same link or not! *)
   in
   let vres = evaportwalk f date person_ports seqfile in
   let lres = transpose vres in 
   let lares = sort_perp_lists lres in
+  printf "\n<===== [evalaway_serv] :: %s\n" seqfile;
   lares
   
 let create_all_clients order person_ports =

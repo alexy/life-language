@@ -545,11 +545,18 @@ let () =
         write_samples   observed from                case_info_filename;
       
         (* if using_servers then -- now we unified it all with client classes! *)
-        rank_person_serv person_ports link from case_list_filename oid
+        printf "\nCALLING rank_person_serv for %d\n" oid;
+        let rank = rank_person_serv person_ports link from case_list_filename oid in
+        printf "\nRETURNED rank_person_serv for %d\n" oid;
+        rank
+
         (* else -- can still uncomment and use the below for testing:
               rank_person_file cells from case_list_filename oid *)
         ) 
-      (range each_person_runs))
+      (range each_person_runs) in
+      printf "\n>>> FINISHED %d <<<\n" oid;
+      res
+      )
     some_people
   in
   

@@ -22,7 +22,7 @@ let pop l =
   let countCores l = filter (xmatch "^processor\\s*:") l |> length in
   optE (countCores @. readLines) "/proc/cpuinfo" *)
 
-let global_process_count = ref ((* coreCount () |? *) 3)
+let global_process_count = ref ((* coreCount () |? *) 2)
 
 
 let invoke f x =
