@@ -20,7 +20,7 @@ $(STUBS).o: $(STUBS).c generate.h
 	g++ $(SRILM_INC) -I`ocamlc -where` -o $@ -c $<
 
 $(CLASS).cmo: $(CLASS).ml $(MOD).cmo
-	ocamlfind ocamlc -c $(BASECLASS_INC) $^ -o $@
+	ocamlfind ocamlc -thread -package ethread -c $(BASECLASS_INC) $^ -o $@
 
 $(CLASS).cmx: $(CLASS).ml $(MOD).cmx
 	ocamlfind ocamlopt -c $(BASECLASS_INC) $^ -o $@

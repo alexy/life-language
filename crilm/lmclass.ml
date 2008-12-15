@@ -6,7 +6,7 @@ inherit baseclient
 
   val mutable handle = Lmclient.null ()
   val mutable handle_i = 0
-  val mutable compute_lock = false
+  val mutable sem = Semaphore.create 1
   
   method destroy =
     Lmclient.destroy handle
@@ -22,11 +22,10 @@ inherit baseclient
   method get_handle = handle
   method int_handle = handle_i
   method compute string =
-    while compute_lock do () done;
-    compute_lock <- true;
+    Semaphore.lock sem;
     (* Printf.printf "client %d starts computing\n" handle_i; *)
     let result = Lmclient.compute handle string in
-    compute_lock <- false;
+    Semaphore.unlock sem;
     (* Printf.printf "client %d stops computing\n" handle_i; *)
     result
   method complete_sentence maxwords li =

@@ -524,11 +524,12 @@ let () =
 
   
   let ranks = 
-    (* List.map *)
-    Parallel.pmap ~process_count:2 
+    (* NB make parallelism a command-line option with numprocs *)
+    List.map
+    (* Parallel.pmap ~process_count:2  *)
     (fun person -> 
       let oid = person_oid person in
-      printf "\n--- STARTED %d ---\n" oid;
+      (* printf "\n--- STARTED %d ---\n" oid; *)
       let res = List.map 
       (* Parmap.par_map  *)
       (fun i ->
@@ -549,7 +550,7 @@ let () =
         (* else -- can still uncomment and use the below for testing:
               rank_person_file cells from case_list_filename oid *)
         ) 
-      (range each_person_runs))
+      (range each_person_runs) in res)
     some_people
   in
   
