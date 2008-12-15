@@ -346,19 +346,29 @@ let person_rank (oid:int) oids =
   let oids_nth = List.combine oids (range0 last) in
   List.assoc oid oids_nth
 
+let array_find ex array elem =
+  let last = (Array.length array) - 1 in
+  let rec go i =
+    if ex array.(i) = elem then Some i
+    else if i < last then go (i+1)
+    else None
+  in
+  go 0
+      
+let triple_person = function (x,_,_) -> x
+let triple_person's = function x -> string_of_int (triple_person x)
+
 let find_rank ?(infinite=1000) person_oid ares =
   (* Evalm.print_perps ares *)
   (* NB: instead of this, find in array via binary search! *)
-  let lres = Array.to_list ares in
-  try begin
-    let rank = person_rank person_oid (List.map (function (x,_,_) -> x) lres) in
+  let ranko = array_find triple_person ares person_oid in
+  match ranko with
+  | Some rank ->
     printf "person_oid %d => rank %d!\n" person_oid rank; flush stdout;
     person_oid,rank
-  end
-  with Not_found -> begin printf "*** person_oid %d *** rank not found\n" person_oid;
-    printf "list: %s\n" (String.concat "," (List.map (fun (x,_,_) -> string_of_int x) lres));
+  | None -> printf "*** person_oid %d *** rank not found\n" person_oid;
+    printf "list: %s\n" (String.concat "," (List.map triple_person's (Array.to_list ares)));
     person_oid,infinite (* a really big rank, bigger than for real *)
-  end
   
 let find_ranks person_oid lares =
   List.map (find_rank person_oid) lares
@@ -370,15 +380,27 @@ let rank_person_file cells from sample_list_filename person_oid =
 
 let rank_person_serv person_ports link from sample_list_filename person_oid =
   (* we'll keep the LM results as both array and list, for convenience *)
-  let lares = Evalm.evalaway_serv person_ports link from sample_list_filename in
+  (* diversify eval walk order for parallel setups: *)
+  let pp = if person_oid mod 2 = 1 then 
+    begin
+      printf "original order for %d" person_oid; 
+      person_ports 
+    end  
+  else 
+    begin
+      printf "reverting for %d" person_oid;      
+      List.rev person_ports
+    end
+  in
+  let lares = Evalm.evalaway_serv pp link from sample_list_filename in
   find_ranks person_oid lares
   
-let rec take l n =
-  let rec go l n acc =
+let rec take n l =
+  let rec go n l acc =
   match l with
-  | x::xs when n > 0 -> go xs (n-1) (x::acc) 
+  | x::xs when n > 0 -> go (n-1) xs (x::acc) 
   | _ -> List.rev acc in
-  go l n []
+  go n l []
   
   
 let print_results ?(oc=stdout) ranks =
@@ -414,6 +436,11 @@ let yes_no = function | true -> "yes" | _ -> "no"
 let upperclass_clients =
   List.map (function port,client -> (port, (client :> baseclient)))
 
+let join ?(sep=" ") ili =
+  let sli = List.map string_of_int ili in
+  String.concat sep sli
+  
+    
 let () =
   let argv = Array.to_list Sys.argv in
   let order = 5 in (* parameterize *)
@@ -453,7 +480,7 @@ let () =
   then sprintf "servers (from %s), clients = %s" (unsome ppp_opt) (yes_no link)
   else "files" in
   printf "evaluating on trained before %s using %s\n" from using_what;
-  
+ 
   let home   = Unix.getenv "HOME" in
   let cells  = Filename.concat home "cells" in
   let inputs = Filename.concat cells "input" in
@@ -462,13 +489,28 @@ let () =
   let sample_info_base = sample_filebase ^ "-info" in
   
   (* List.iter (fun i ->
-    let observed = sample eligible from sample_len in
-    print_sample observed) [1;2;3]
+     let observed = sample eligible from sample_len in
+     print_sample observed) [1;2;3]
   *)
 
   let eligible = pput dataframe from sample_len in
+  let some_people,say = match take_people with
+  | Some few's -> let few = int_of_string few's in
+                  take few eligible,"some"
+  | None -> eligible,"all" in
+  let the_people  = List.map person_oid some_people in
+  let person_ports = List.filter (fun pp ->
+    let person = fst pp in
+    List.mem person the_people
+    ) person_ports
+  in
+  printf "processing %s %d eligible people, %d person-ports\n"
+    say (List.length some_people) (List.length person_ports);
+  let ports_people     = List.map fst person_ports in
+  printf "those people: %s\n" (join the_people);
+  printf "ports people: %s\n" (join ports_people);
   
-  let sample_index = 3 in (* use sample_len to differentiate *)
+  let sample_index = 4 in (* use sample_len to differentiate *)
   let sample_suffix = 
           "_" ^ from 
         ^ "_s" ^ (string_of_int sample_len)
@@ -480,23 +522,21 @@ let () =
   let ranks_base = Filename.concat ranks "ranks" in
   let ranks_filename = ranks_base ^ sample_suffix in
 
-  let some_people = match take_people with
-  | Some few -> take eligible (int_of_string few)
-  | None -> eligible in
   
   let ranks = 
     (* List.map *)
-    Parmap.par_map 
+    Parallel.pmap ~process_count:2 
     (fun person -> 
-      List.map 
+      let oid = person_oid person in
+      printf "\n--- STARTED %d ---\n" oid;
+      let res = List.map 
       (* Parmap.par_map  *)
       (fun i ->
         (* printf "runs: i => %d\n" i; *)
-        let i's = string_of_int i in
-        let oid   = person_oid person in
-        let oid's = string_of_int oid in
         let starts = pick_starts sample_len person batch in
         let observed = samples from sample_len person starts in
+        let i's = string_of_int i in
+        let oid's = string_of_int oid in
         let case_suffix = "_p"^oid's
           ^ ( if each_person_runs > 1 then "-"^i's else "") in
         let case_list_filename = sample_list_filename ^ case_suffix in

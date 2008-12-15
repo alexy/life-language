@@ -14,6 +14,11 @@ LMCLIENT_X = -I crilm crilm/lmclient.cmxa crilm/lmclass.cmx crilm/generate.o
 SRILM=/s/src/srilm/current
 SRILM_CCLIB=-cclib -L$(SRILM)/lib/macosx -cclib '-loolm -lmisc -ldstruct' -cclib -lm crilm/generate.o
 
+EVALMO=evalm.ml process.cmo baseclient.cmo clclass.cmo syclass.cmo
+PARALLEL=parallel
+SAMPLO=$(PARALLEL).cmo dataframe.cmo baseclient.cmo process.cmo clclass.cmo syclass.cmo $(LMCLASS_A) evalm.cmo sample.cmo
+SAMPLX=${SAMPLO:.cmo=.cmx}
+
 # comment this out to compile without pgocaml available:
 USE_POSTGRES=-DUSE_POSTGRES
 
@@ -24,8 +29,7 @@ cellspans celltimes: %: %.cmo
 
 percells.cmo:
 	ocamlfind ocamlc $(PGOC_PKG) -c $< -o $@
-
-
+	
 dataframe.cmo: %.cmo: %.ml
 	ocamlfind ocamlc   -pp "camlp4o Camlp4MacroParser.cmo -DONT_USE_POSTGRES" -c $< -o $@
 
@@ -41,27 +45,34 @@ dataframe.cmx: %.cmx: %.ml
 	
 genlm: genlm.ml
 	ocamlfind ocamlc -package unix,str -linkpkg $< -o $@ 
+
+baseclient.cmo: %.cmo: %.ml
+	ocamlfind ocamlc -thread -package ethread -c $< -o $@
 	
-evalm.cmo: evalm.ml process.cmo clclass.cmo syclass.cmo
-	ocamlfind ocamlc   -package unix,str -linkpkg $(LMCLIENT_A) -c $< -o $@ 
+#clclass.cmo syclass.cmo crilm/lmclass.cmo: baseclient.cmo
+	
+evalm.cmo: $(EVALMO) $(LMCLASS_A) 
+	ocamlfind ocamlc -thread -package unix,str,ethread -linkpkg -c $(EVALMO) $(LMCLIENT_A) -o $@ 
 
 evalm.cmx: evalm.ml process.cmx clclass.cmo syclass.cmo
 	ocamlfind ocamlopt -package unix,str -linkpkg $(LMCLIENT_X) -c $< -o $@ 
 
+sample.cmo: sample.ml $(LMCLASS_A)
+	ocamlfind ocamlc $(DEBUG) -package pcre -o $@ -c $<
 
-sample: parmap.cmo dataframe.cmo baseclient.cmo process.cmo clclass.cmo syclass.cmo $(LMCLASS_A) evalm.cmo sample.ml
-	 ocamlfind ocamlc $(DEBUG) -package unix,str,pcre -linkpkg $^ $(LMCLIENT_A) -cclib -lstdc++ $(SRILM_CCLIB) -o $@ 
+sample: $(SAMPLO)
+	 ocamlfind ocamlc $(DEBUG) -thread -package unix,str,pcre,ethread -linkpkg $^ $(LMCLIENT_A) -cclib -lstdc++ $(SRILM_CCLIB) -o $@ 
 	
-samplebin: evalm.cmx parmap.cmx dataframe.cmx sample.ml
-	 ocamlfind ocamlopt        -package str,unix,pcre -linkpkg $(LMCLIENT_X) -cclib -lstdc++ $(SRILM_CCLIB) -o $@ $^
+samplebin: 
+	 ocamlfind ocamlopt -thread -package str,unix,pcre,ethread -linkpkg $(LMCLIENT_X) -cclib -lstdc++ $(SRILM_CCLIB) -o $@ $^
 
-servctl: evalm.ml servctl.ml
-	 ocamlfind ocamlc -g -package str,unix,pcre -linkpkg $(LMCLIENT_A) -cclib -lstdc++ $(SRILM_CCLIB) -o $@ $^
+servctl: baseclient.cmo process.cmo clclass.cmo syclass.cmo $(LMCLASS_A) evalm.ml servctl.ml
+	 ocamlfind ocamlc -g -thread -package str,unix,pcre,ethread -linkpkg $(LMCLIENT_A) -cclib -lstdc++ $(SRILM_CCLIB) -o $@ $^
 	
-parmap.cmo: parmap.ml
+parmap.cmo parallel.cmo: %.cmo: %.ml
 	 ocamlfind ocamlc -package unix,pcre -o $@ -c $^
 
-parmap.cmx: parmap.ml
+parmap.cmx parallel.cmx: %.cmx: %.ml
 	 ocamlfind ocamlopt -package unix,pcre -o $@ -c $^
 	
 clean:

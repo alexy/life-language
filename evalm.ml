@@ -164,7 +164,9 @@ let launch_lm_server dir ?date port_base oc_ppp =
   let lm = sprintf "%s/mitr-wb5-%s.lm" dir person'date in
   if Sys.file_exists lm then 
     begin
-      let command_line_prefix = sprintf "ngram -lm %s -order 5 -server-port" lm in
+      (* NB! maxclients == 1 for forced serialization,
+        until system-wide semaphores work... *)
+      let command_line_prefix = sprintf "ngram -lm %s -order 5 -server-maxclients 1 -server-port" lm in
       let port = person_port port_base person in
       (* print_endline command_line_prefix; *)
       let pid = spawn_server_process command_line_prefix port in
@@ -182,6 +184,9 @@ let launch_all_servers ?(f=launch_lm_server) root ?date port_base ppp_filename =
   let subdirs = Array.to_list (Sys.readdir root) in
   let subdirs = List.filter (fun x -> Str.string_match numbers x 0 && x <> "0") subdirs in
   (* let subdirs = ["1";"9"] in *)
+  let subdirs = Array.of_list (List.map int_of_string subdirs) in
+  Array.sort compare subdirs;
+  let subdirs = List.map string_of_int (Array.to_list subdirs) in
   let opt_ppp = match date with
     | Some date ->
       List.map (fun x -> f (Filename.concat root x) ~date:date port_base oc_ppp) subdirs
