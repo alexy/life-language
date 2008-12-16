@@ -16,6 +16,7 @@ extern "C" {
 #include <caml/memory.h>
 #include <caml/mlvalues.h>
 #include <caml/alloc.h>
+#include <caml/signals.h>
 }
 
 
@@ -70,7 +71,7 @@ extern "C" value lmclient_complete_sentence (value v_lm_handle, value v_maxwords
   LMClient *useLM = ::lmclient[lm_index];
 
   const unsigned conlen = array_size + 1;
-#if 0
+#if 1
   VocabIndex *context = new VocabIndex[conlen];
   assert(context != 0);
   context[array_size] = Vocab_None;
@@ -82,17 +83,21 @@ extern "C" value lmclient_complete_sentence (value v_lm_handle, value v_maxwords
     c_str = String_val(Field(v_sarray, i));
     context[i] = useLM->vocab.getIndex(c_str);
     // NB need to check for OOVs?
-    // cerr << i << ": " << c_str << " index " << context[i] << endl;
+#ifdef DEBUG
+    cerr << i << ": " << c_str << " index " << context[i] << endl;
+#endif
   }
 
+  const unsigned senlen = maxwords + 1;
   VocabIndex *indices = new VocabIndex[senlen];
   assert(indices != 0);
     
   indices = generateSentence(useLM, maxwords, context, conlen);
-  // cerr << "we have indices for a sentence!" << endl;
-  // for (int i = 0; i < maxwords; ++i) cerr << i << ": " << indices[i] << endl;
+#ifdef DEBUG
+  cerr << "we have indices for a sentence!" << endl;
+  for (int i = 0; i < maxwords; ++i) cerr << i << ": " << indices[i] << endl;
+#endif
   
-  const unsigned senlen = maxwords+1;
   VocabString *sentence = new VocabString[senlen];
   assert(sentence != 0);
   
@@ -107,10 +112,14 @@ extern "C" value lmclient_complete_sentence (value v_lm_handle, value v_maxwords
   VocabString *sentence = generateSentence(useLM, maxwords, context, conlen);
 #endif
 
-  // cerr << "we have a sentence!" << endl;
+#ifdef DEBUG
+  cerr << "we have a sentence!" << endl;
+#endif
   result = caml_alloc(maxwords, 0);
   for (int i = 0; i < maxwords; ++i) {
-    // cerr << i << ": " << sentence[i] << endl;
+#ifdef DEBUG
+    cerr << i << ": " << sentence[i] << endl;
+#endif
     Store_field(result, i, caml_copy_string(sentence[i]));
   }
   
@@ -161,6 +170,10 @@ extern "C" value lmclient_destroy (value v_lm_handle) {
 }
 
 extern "C" value lmclient_compute (value v_lm_handle, value v_filename) {
+  // don't really know whether we need this, trying everything
+  // against deadlock:
+  enter_blocking_section();
+  
   CAMLparam2 (v_lm_handle, v_filename);
 
   int lm_handle = Int_val (v_lm_handle);
@@ -198,6 +211,7 @@ extern "C" value lmclient_compute (value v_lm_handle, value v_filename) {
   
   string str = oss.str();  
   
+  leave_blocking_section();
   CAMLreturn (caml_copy_string(str.c_str()));
 }
 

@@ -3,151 +3,6 @@
 open Printf
 open Baseclient
 
-(* initially I thought I'd need to revert a buffer
-  to parse a string into a number; in fact not,
-  but why waste a good fun -- posted to codepad.org as well *)
-(* http://codepad.org/I5sPOxrA *)
-let revert_buffer ibuf =
-  let len = (Buffer.length ibuf) in
-  let obuf = Buffer.create len in
-  let rec drop n =
-    match n with
-    | -1 -> Buffer.contents obuf
-    | _  -> begin
-      Buffer.add_char obuf (Buffer.nth ibuf n);
-      drop (n-1)
-    end in
-  drop (len-1)
-
-
-(* terminate on 1 is equivalent to calling with n-1 *)
-let rec skip_n_spaces ic n =
-  let c = input_char ic in
-  match c with 
-  | ' ' | '\t' | '\n' -> if n == 1 then () else skip_n_spaces ic (n-1)
-  | _ -> skip_n_spaces ic n
-      
-
-(* NB: add EOF handling *)
-let skip_n_words ic n =
-  let in_word = ref false in
-  let rec go ic n =
-    let c = input_char ic in
-    match c with
-    | ' ' | '\t' | '\n' ->  
-      if !in_word then 
-        begin
-          if n == 0 then () 
-          else begin 
-            in_word := false; 
-            go ic (n-1) 
-          end
-        end
-      else (* multiple white spaces *)
-        go ic n
-    | _ -> 
-      begin 
-        in_word := true; 
-        go ic n
-      end
-    in
-    if n <= 0 then () 
-    else go ic (n-1)
-      
-      
-let read_list1 ?skip ?n filename =
-  let ic = open_in filename in begin
-  match skip with
-    | Some n -> skip_n_words ic n
-    | None -> () 
-  end;
-  let buf = Buffer.create 10 in
-  let rec parse ic buf len res =
-    try
-      let c = input_char ic in
-      match c with
-      | ' ' | '\n' -> if (Buffer.length buf) == 0 
-        then parse ic buf len res 
-        else let number = int_of_string (Buffer.contents buf) in
-        begin
-          Buffer.reset buf;
-          let res = number::res in
-          let len = len + 1 in
-          match n with
-          | Some n when len == n -> close_in ic; List.rev res
-          | _ -> parse ic buf len res
-        end
-      |'0'..'9' -> 
-        begin
-          Buffer.add_char buf c;
-          parse ic buf len res
-        end
-      | _ -> printf "[%c]\n" c; failwith "bad number file"
-    with End_of_file -> close_in ic; List.rev res
-    in
-    parse ic buf 0 []
-
-
-(* -- using DynArray, use extlib or batteries for that
-let read_list2 ?skip ?n filename =
-  let ic = open_in filename in begin
-  match skip with
-    | Some n -> skip_n_words ic n
-    | None -> () 
-  end;
-  let buf = Buffer.create 10 in
-  let rec parse ic buf len res =
-    try
-      let c = input_char ic in
-      match c with
-      | ' ' | '\n' -> if (Buffer.length buf) == 0 
-        then parse ic buf len res 
-        else let number = int_of_string (Buffer.contents buf) in
-        begin
-          Buffer.reset buf;
-          DynArray.add res number;
-          let len = len + 1 in
-          match n with
-          | Some n when len == n -> close_in ic; (DynArray.to_array res)
-          | _ -> parse ic buf len res
-        end
-      |'0'..'9' -> 
-        begin
-          Buffer.add_char buf c;
-          parse ic buf len res
-        end
-      | _ -> printf "[%c]\n" c; failwith "bad number file"
-    with End_of_file -> close_in ic; (DynArray.to_array res)
-    in
-    parse ic buf 0 (DynArray.create ())
- *)
-
-(* NB: add EOF handling *)
-let rec skip_lines ic n =
-  match n with
-  | 0 -> ()
-  | _ when n < 0 -> failwith "can only skip nonnegative number of lines"
-  | _ -> ignore (input_line ic); skip_lines ic (n-1)
-  
-
-let read_lines ?skip ?n filename =
-  let ic = open_in filename in
-  begin
-    match skip with
-      | Some n -> skip_lines ic n
-      | None -> ()
-  end;
-  let rec go ic len acc =
-    match n with
-    | Some n when len == n -> close_in ic; List.rev acc
-    | _ ->
-      try
-        let line = input_line ic in
-        go ic (len+1 )(line::acc)
-      with End_of_file -> close_in ic; List.rev acc
-  in
-  go ic 0 []
-
 
 let list_of_tuple tuple =
   let list = Array.to_list (Obj.magic tuple) in
@@ -277,8 +132,8 @@ let sample from sample_len our_guy start =
   let prefix_len = start - 1 in
   let finish = prefix_len + sample_len in
   (* printf "person_oid: %d, skipping %d, upto = %d, total = %d\n" person_oid prefix_len upto total; *)
-  let cells  = read_list1 ~skip:prefix_len ~n:sample_len (person_cells_file person_oid) in
-  let times  = read_lines ~skip:prefix_len ~n:sample_len (person_times_file person_oid) in
+  let cells  = Seq.read_cells ~skip:prefix_len ~n:sample_len (person_cells_file person_oid) in
+  let times  = Seq.read_lines ~skip:prefix_len ~n:sample_len (person_times_file person_oid) in
   (cells,times),our_guy,(start,finish)
   
 let samples from sample_len our_guy starts =
@@ -395,13 +250,7 @@ let rank_person_serv person_ports link from sample_list_filename person_oid =
   let lares = Evalm.evalaway_serv pp link from sample_list_filename in
   find_ranks person_oid lares
   
-let rec take n l =
-  let rec go n l acc =
-  match l with
-  | x::xs when n > 0 -> go (n-1) xs (x::acc) 
-  | _ -> List.rev acc in
-  go n l []
-  
+let take = Utils.take
   
 let print_results ?(oc=stdout) ranks =
   List.iter (* i -- each_person_runs *)
@@ -418,29 +267,20 @@ let write_results ranks filename =
 let issome = function Some _ -> true | _ -> false
 (* let issome x = x <> None *)
 let unsome = function Some x -> x | None -> assert false
-  
-(* can this be done with one Pcre.<exec-type-op>?: *)
-let elem_match list regex's =
-  let re = Pcre.regexp regex's in
-  try
-    let elem = List.find (fun x -> Pcre.pmatch ~rex:re x) list in
-    let meat = (Pcre.extract ~rex:re elem).(1) in
-    Some meat
-  with Not_found -> None
-  
+    
 let yes_no = function | true -> "yes" | _ -> "no"
 
 (* NB: we have to BOTH provide upclass coercion below AND in evalm when creating person_ports lists! 
   Check this and try to relax...
   *)
+
+  
+let elem_match = Argv.elem_match
+let join = Utils.join
+
 let upperclass_clients =
   List.map (function port,client -> (port, (client :> baseclient)))
 
-let join ?(sep=" ") ili =
-  let sli = List.map string_of_int ili in
-  String.concat sep sli
-  
-    
 let () =
   let argv = Array.to_list Sys.argv in
   let order = 5 in (* parameterize *)
@@ -466,15 +306,17 @@ let () =
   let using_servers = ppp_opt <> None in
   let link = elem_match argv "(--clients)" <> None in
   let person_ports = match ppp_opt with
-    | Some filename -> begin let ppp = Evalm.read_ppp filename in 
+    | Some filename -> begin let ppp = Common.read_ppp filename in 
                        let pp = List.map (function x,y,_ -> x,y) ppp in
                        match link with
-                       | true -> upperclass_clients (Evalm.create_all_clients  order pp)
-                       | _    -> upperclass_clients (Evalm.create_all_systems order pp)
+                       | true -> upclass (Evalm.create_all_clients order pp)
+                       | _    -> upclass (Evalm.create_all_systems order pp)
                        end
                        (* the range below can be obtained from examining cells/ *)
     | None          -> upperclass_clients (Evalm.create_all_commands from_opt order (range 100))
 
+  in
+  let parallel = elem_match argv "(--parallel)" <> None
   in
   let using_what = if using_servers 
   then sprintf "servers (from %s), clients = %s" (unsome ppp_opt) (yes_no link)
@@ -522,14 +364,15 @@ let () =
   let ranks_base = Filename.concat ranks "ranks" in
   let ranks_filename = ranks_base ^ sample_suffix in
 
-  
+  let the_map = if parallel then
+    Parallel.pmap ~process_count:2
+  else List.map in
+   
   let ranks = 
-    (* NB make parallelism a command-line option with numprocs *)
-    List.map
-    (* Parallel.pmap ~process_count:2  *)
+    the_map
     (fun person -> 
       let oid = person_oid person in
-      (* printf "\n--- STARTED %d ---\n" oid; *)
+      printf "\n--- STARTED %d ---\n" oid;
       let res = List.map 
       (* Parmap.par_map  *)
       (fun i ->
@@ -550,11 +393,13 @@ let () =
         (* else -- can still uncomment and use the below for testing:
               rank_person_file cells from case_list_filename oid *)
         ) 
-      (range each_person_runs) in res)
+      (range each_person_runs) in 
+      printf "\n=== FINISHED %d ===\n" oid;
+      res)
     some_people
   in
   
-  print_results ranks;
+  print_results ranks; flush stdout;
   write_results ranks ranks_filename;
   
   if link then Evalm.destroy_all_clients person_ports else ();

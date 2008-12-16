@@ -7,8 +7,10 @@ generateSentence(const LM* lm, unsigned maxWords, const VocabIndex* sentence, co
 
   if (maxWords <= conlen) maxWords = conlen + 1; // generate at least one word!
 
-  // cerr << "context indices, total " << conlen << endl;
-  // for (int i = 0; i < conlen; ++i) cerr << i << ": " << sentence[i] << endl;
+#ifdef DEBUG
+  cerr << "context indices, total " << conlen << ", maxwords requested: "<< maxWords << endl;
+  for (int i = 0; i < conlen; ++i) cerr << i << ": " << sentence[i] << endl;
+#endif
   
   /*
    * Since we need to add the begin/end sentences tokens, and
@@ -26,7 +28,9 @@ generateSentence(const LM* lm, unsigned maxWords, const VocabIndex* sentence, co
   for (int i = 0; i < conlen && sentence[i] != Vocab_None && last > 0; ++i) {
     --last;
     genBuffer[last] = sentence[i];
-    // cerr << "position " << last << " copied " << genBuffer[last] << endl;
+#ifdef DEBUG
+    cerr << "position " << last << " copied " << genBuffer[last] << endl;
+#endif
   }
   /*
    * Generate words one-by-one until hitting an end-of-sentence.
@@ -38,17 +42,21 @@ generateSentence(const LM* lm, unsigned maxWords, const VocabIndex* sentence, co
   // getWords(indices)=>print words (they were garbage in turn)
   
   VocabIndex word;
-  const VocabIndex endS = lm->vocab.seIndex();
+  const VocabIndex endS = lm->vocab.seIndex(), pau = lm->vocab.pauseIndex();
 
   while (last > 0 /* && genBuffer[last] != lm->vocab.seIndex() */) {
     --last;
-    // cerr << "position " << last;
+#ifdef DEBUG
+    cerr << "position " << last;
+#endif
     do {
       // in generateWord's this is not const LM, but plain:
       word = ((LM*)lm)->generateWord(&genBuffer[last + 1]);
-    } while (!allow_se && word == endS);
+    } while (!allow_se && (word == endS /*|| word == pau*/));
     genBuffer[last] = word;
-    // cerr << " generated " << genBuffer[last] << endl;
+#ifdef DEBUG
+    cerr << " generated " << genBuffer[last] << endl;
+#endif
   }
     
   /*
@@ -63,8 +71,10 @@ generateSentence(const LM* lm, unsigned maxWords, const VocabIndex* sentence, co
   }
   result[i] = Vocab_None;
 
-  // cerr << "generated indices, total " << maxWords << endl;
-  // for (i = 0; i <= maxWords; ++i) cerr << i << ": " << result[i] << endl;
+#ifdef DEBUG
+  cerr << "generated indices, total " << maxWords << endl;
+  for (i = 0; i <= maxWords; ++i) cerr << i << ": " << result[i] << endl;
+#endif
   return result;
 }
 

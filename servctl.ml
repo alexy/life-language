@@ -1,11 +1,3 @@
-(* can this be done with one Pcre.<exec-type-op>?: *)
-let elem_match list regex's =
-  let re = Pcre.regexp regex's in
-  try
-    let elem = List.find (fun x -> Pcre.pmatch ~rex:re x) list in
-    let meat = (Pcre.extract ~rex:re elem).(1) in
-    Some meat
-  with Not_found -> None
 
 let report what ?date ppp =
   let maybe_date = match date with 
@@ -16,6 +8,8 @@ let report what ?date ppp =
   Printf.printf "\n%s %d servers%s on ports %d-%d\n" what total maybe_date from_port to_port
 
 type control = Start | Stop
+
+let elem_match = Argv.elem_match
 
 let () =
   let argv = Array.to_list Sys.argv in
@@ -54,7 +48,7 @@ let () =
     report "started" ~date:from ppp; flush stdout;
 
   | Stop ->
-    let ppp  = Evalm.read_ppp ppp_filename in
+    let ppp  = Common.read_ppp ppp_filename in
     let pids = List.map (function _,_,x -> x) ppp in
     List.iter (fun pid -> ignore (Unix.kill pid 1)) pids;
     report "stopped" ppp

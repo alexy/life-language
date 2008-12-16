@@ -7,17 +7,19 @@ MOD=lmclient
 CLASS=lmclass
 BASECLASS_INC=-I ..
 STUBS=$(MOD)_stubs
-BYTES=$(MOD).cma lmclass.cmo calm.ml
+BYTES=$(MOD).cma ../baseclient.cmo lmclass.cmo calm.ml 
+
+#DEBUG=-DDEBUG
 
 all: byte bin
 
 generate.o: generate.cc
-	g++ $(SRILM_INC) -o $@ -c $<
+	g++ $(DEBUG) $(SRILM_INC) -o $@ -c $<
 
 stubs: $(STUBS).o
 	
 $(STUBS).o: $(STUBS).c generate.h
-	g++ $(SRILM_INC) -I`ocamlc -where` -o $@ -c $<
+	g++ $(DEBUG) $(SRILM_INC) -I`ocamlc -where` -o $@ -c $<
 
 $(CLASS).cmo: $(CLASS).ml $(MOD).cmo
 	ocamlfind ocamlc -thread -package ethread -c $(BASECLASS_INC) $^ -o $@
@@ -42,7 +44,7 @@ $(MOD).cmxa: $(MOD).cmx
 	
 	
 byte: dll$(MOD).so $(BYTES)
-	ocamlfind ocamlc -I . $(BYTES) -o calm
+	ocamlfind ocamlc $(BASECLASS_INC) $(BYTES) -o calm
 
 bin: $(MOD).cmxa generate.o lmclass.cmx calm.ml
 	ocamlfind ocamlopt -I . -cclib -lstdc++ $(SRILM_CCLIB) $^ -o calmbin
