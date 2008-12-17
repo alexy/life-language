@@ -9,9 +9,10 @@ let () =
   print_endline "let's go";
 
   let portbase = 10000 in
+  let vocab = "/Users/alexyk/cells/vocab/all-cells.txt" in
   let lms = List.map (fun i ->
     let port = portbase + i in
-    let lm = new lmclient (sprintf "%d@localhost" port) 5 in
+    let lm = new lmclient (sprintf "%d@localhost" port) 5 vocab in
     printf "handle = %d\n" lm#int_handle; flush stdout;
     let results = lm#compute "/Users/alexyk/cells/seq40" in
     Printf.printf "=> %s\n" results;

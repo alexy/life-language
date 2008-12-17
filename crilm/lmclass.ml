@@ -1,7 +1,7 @@
 open Baseclient
 open Printf
 
-class lmclient (port: string) (order: int) =
+class lmclient (port: string) (order: int) (vocab: string) =
 object (self)
 inherit baseclient
 
@@ -13,7 +13,7 @@ inherit baseclient
   method destroy =
     Lmclient.destroy handle
   initializer 
-    handle   <- Lmclient.create port order;
+    handle   <- Lmclient.create port order vocab;
     finalize <- (0, handle);
     handle_i <- Lmclient.int_of_handle handle;
     (* see caml-list and #ocaml log of 2008-12-12 *)

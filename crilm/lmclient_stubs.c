@@ -59,7 +59,7 @@ extern "C" value lmclient_complete_sentence (value v_lm_handle, value v_maxwords
   CAMLlocal1 (result);
   
   int maxwords   = Int_val(v_maxwords);
-  int array_size = Wosize_val(v_sarray);
+  int prefix_length = Wosize_val(v_sarray);
   // cerr << "C++ got array of size " << array_size << " with elements:" << endl;
   // cerr << "they've asked us to generate a sentence of length => " << maxwords << endl;
 
@@ -70,67 +70,39 @@ extern "C" value lmclient_complete_sentence (value v_lm_handle, value v_maxwords
   int lm_index = lm_handle - 1;
   LMClient *useLM = ::lmclient[lm_index];
 
-  const unsigned conlen = array_size + 1;
-#if 1
-  VocabIndex *context = new VocabIndex[conlen];
-  assert(context != 0);
-  context[array_size] = Vocab_None;
-  // cerr << "allocated a context of size " << conlen << " with Vocab_None == " << Vocab_None << endl;
-  
-  // NB could use vocab.getIndices with a char *array[] 
-  char *c_str = 0;
-  for (int i = 0; i < array_size; ++i) {
-    c_str = String_val(Field(v_sarray, i));
-    context[i] = useLM->vocab.getIndex(c_str);
-    // NB need to check for OOVs?
-#ifdef DEBUG
-    cerr << i << ": " << c_str << " index " << context[i] << endl;
-#endif
-  }
+  if (maxwords <= prefix_length) maxwords = prefix_length + 1;
+   
+  const unsigned sentence_length = maxwords + 1;
 
-  const unsigned senlen = maxwords + 1;
-  VocabIndex *indices = new VocabIndex[senlen];
-  assert(indices != 0);
-    
-  indices = generateSentence(useLM, maxwords, context, conlen);
-#ifdef DEBUG
-  cerr << "we have indices for a sentence!" << endl;
-  for (int i = 0; i < maxwords; ++i) cerr << i << ": " << indices[i] << endl;
-#endif
-  
-  VocabString *sentence = new VocabString[senlen];
+  VocabString *sentence = new VocabString[sentence_length];
   assert(sentence != 0);
+  for (int i = 0; i < prefix_length; ++i) {
+    sentence[i] = String_val(Field(v_sarray, i));
+  }
+  sentence[prefix_length] = NULL;   
   
-	useLM->vocab.getWords(indices, sentence, maxwords);  
-#else
-  VocabString *context = new VocabString[conlen];
-  assert(context != 0);
-  for (int i = 0; i < array_size; ++i) {
-    context[i] = String_val(Field(v_sarray, i));
-  }   
-  
-  VocabString *sentence = generateSentence(useLM, maxwords, context, conlen);
-#endif
+  useLM->generateSentence(maxwords-prefix_length+1, &sentence[prefix_length], sentence);
 
 #ifdef DEBUG
   cerr << "we have a sentence!" << endl;
 #endif
   result = caml_alloc(maxwords, 0);
-  for (int i = 0; i < maxwords; ++i) {
+  for (int i = 0; i < maxwords && sentence[0] != NULL; ++i) {
 #ifdef DEBUG
     cerr << i << ": " << sentence[i] << endl;
 #endif
     Store_field(result, i, caml_copy_string(sentence[i]));
   }
   
-  delete context; delete sentence; // should be auto upon out-of-scope, but just in case
+  delete sentence; // should be auto upon out-of-scope, but just in case
   CAMLreturn (result);
 }
 
 
-extern "C" value lmclient_create (value v_server, value v_order) {
-  CAMLparam2 (v_server, v_order);
-  
+extern "C" value lmclient_create (value v_server, value v_order, value v_vocab) {
+  CAMLparam3 (v_server, v_order, v_vocab);
+  File vocab_file(String_val(v_vocab), "r");
+
   if (num_clients >= MAX_LM_CLIENTS) {
     CAMLreturn (Val_int(-1));
   }
@@ -140,6 +112,10 @@ extern "C" value lmclient_create (value v_server, value v_order) {
   
   Vocab *vocab = new Vocab;
   assert(vocab != 0);
+  cerr << "client " << (num_clients+1) << " reading vocab " << vocab_file.name << endl;
+  vocab->read(vocab_file);
+  vocab->remove(vocab->ssIndex());
+  vocab->remove(vocab->seIndex());
   
   useLM = new LMClient(
     /*Vocab &*/ *vocab, 

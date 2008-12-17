@@ -9,7 +9,7 @@ external  null    : unit -> handle             = "lmclient_null"
 external  is_null : handle -> bool             = "lmclient_is_null"
 external  int_of_handle : handle -> int        = "lmclient_int_of_handle"
 
-external  create  : string -> int -> handle    = "lmclient_create"
+external  create  : string -> int -> string -> handle = "lmclient_create"
 external  destroy : handle -> int              = "lmclient_destroy"
 external  compute : handle -> string -> string = "lmclient_compute"
 

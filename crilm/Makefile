@@ -9,7 +9,7 @@ BASECLASS_INC=-I ..
 STUBS=$(MOD)_stubs
 BYTES=$(MOD).cma ../baseclient.cmo lmclass.cmo calm.ml 
 
-#DEBUG=-DDEBUG
+DEBUG=-DDEBUG
 
 all: byte bin
 
