@@ -6,3 +6,10 @@ let elem_match list regex's =
     let meat = (Pcre.extract ~rex:re elem).(1) in
     Some meat
   with Not_found -> None
+
+let match elem regex's =
+  let re = Pcre.regexp regex's in
+  try
+    let meat = (Pcre.extract ~rex:re elem).(1) in
+    Some meat
+  with Not_found -> None

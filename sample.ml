@@ -275,7 +275,8 @@ let yes_no = function | true -> "yes" | _ -> "no"
   *)
 
   
-let elem_match = Argv.elem_match
+let opt = Utils.elem_match
+let rematch = Utils.rematch
 let join = Utils.join
 
 let upperclass_clients =
@@ -284,40 +285,49 @@ let upperclass_clients =
 let () =
   let argv = Array.to_list Sys.argv in
   let order = 5 in (* parameterize *)
-  let from_opt = elem_match argv "--from=(\\d{4}(-\\d{2}){2})" in
+  let ppp_ext = "\\.ppp" in
+  let ppp_opt = opt argv ("--ppp=(.*"^ppp_ext^")") in
+  let using_servers = ppp_opt <> None in
+  let ppp_filename = match ppp_opt with Some x -> printf "ppp file given: %s\n" x; x | None -> "" in
+  let date_re = "(\\d{4}(-\\d{2}){2})" in
+  let from_opt = opt argv ("--from="^date_re) in
+  printf "hey!\n"; 
+  let need_from () = failwith "we need a from date for naming samples and results" in
   let from = match from_opt with 
   | Some date's -> date's
-  | None -> failwith "we need a from date for naming samples and results" in
-  let sample_len = match (elem_match argv "--sample=(\\d+)") with
+  | None -> if using_servers then begin
+    match rematch ppp_filename (date_re^ppp_ext) with
+    | Some date's -> date's
+    | None -> need_from ()
+  end else need_from () in
+  let sample_len = match (opt argv "--sample=(\\d+)") with
   | Some len's -> int_of_string len's
   | None -> 10 in
-  let percells_file = elem_match argv "--matrix=(.*\\.bin)" in
+  (* let vocab = match (opt argv "--vocab=(.+)") with
+  | Some file -> file
+  | None -> "/Users/alexyk/cells/vocab/all-cells.txt" in *)
+  let percells_file = opt argv "--matrix=(.+\\.bin)" in
   let dataframe = match percells_file with
   | Some file -> Dataframe.get ~fromfile:file ()
-  | None      -> Dataframe.get () in
-  let each_person_runs = match (elem_match argv "--runs=(\\d+)") with
+  | None      -> Dataframe.get ~fromfile:"percells.bin" () (* Dataframe.get () *) in
+  let each_person_runs = match (opt argv "--runs=(\\d+)") with
   | Some runs -> int_of_string runs
   | None -> 1 in
-  let batch = match (elem_match argv "--batch=(\\d+)") with
+  let batch = match (opt argv "--batch=(\\d+)") with
   | Some batch -> int_of_string batch
   | None -> 1 in
-  let take_people = elem_match argv "--take=(\\d+)" in
-  let ppp_opt = elem_match argv "--ppp=(.*\\.ppp)" in
-  let using_servers = ppp_opt <> None in
-  let link = elem_match argv "(--clients)" <> None in
+  let take_people = opt argv "--take=(\\d+)" in
+  let link = opt argv "(--clients)" <> None in
+  let parallel = opt argv "(--parallel)" <> None in
   let person_ports = match ppp_opt with
     | Some filename -> begin let ppp = Common.read_ppp filename in 
                        let pp = List.map (function x,y,_ -> x,y) ppp in
                        match link with
-                       | true -> upclass (Evalm.create_all_clients order pp)
-                       | _    -> upclass (Evalm.create_all_systems order pp)
+                       | true -> upperclass_clients (Evalm.create_all_clients order pp)
+                       | _    -> upperclass_clients (Evalm.create_all_systems order pp)
                        end
                        (* the range below can be obtained from examining cells/ *)
-    | None          -> upperclass_clients (Evalm.create_all_commands from_opt order (range 100))
-
-  in
-  let parallel = elem_match argv "(--parallel)" <> None
-  in
+    | None          -> upperclass_clients (Evalm.create_all_commands from_opt order (range 100)) in
   let using_what = if using_servers 
   then sprintf "servers (from %s), clients = %s" (unsome ppp_opt) (yes_no link)
   else "files" in
@@ -372,7 +382,7 @@ let () =
     the_map
     (fun person -> 
       let oid = person_oid person in
-      printf "\n--- STARTED %d ---\n" oid;
+      (* printf "\n--- STARTED %d ---\n" oid; *)
       let res = List.map 
       (* Parmap.par_map  *)
       (fun i ->
@@ -394,7 +404,7 @@ let () =
               rank_person_file cells from case_list_filename oid *)
         ) 
       (range each_person_runs) in 
-      printf "\n=== FINISHED %d ===\n" oid;
+      (* printf "\n=== FINISHED %d ===\n" oid; *)
       res)
     some_people
   in

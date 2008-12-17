@@ -9,28 +9,28 @@ let report what ?date ppp =
 
 type control = Start | Stop
 
-let elem_match = Argv.elem_match
+let opt = Utils.elem_match
 
 let () =
   let argv = Array.to_list Sys.argv in
   
-  let start = (elem_match argv "(^start$)") <> None in
-  let stop  = (elem_match argv "(^stop$)")  <> None in
+  let start = (opt argv "(^start$)") <> None in
+  let stop  = (opt argv "(^stop$)")  <> None in
   if not (stop || start) || (stop && start) then failwith "either stop or start" else ();
   let action = if start then Start else Stop in
   
-  let from_opt = elem_match argv "--from=(\\d{4}(-\\d{2}){2})" in
+  let from_opt = opt argv "--from=(\\d{4}(-\\d{2}){2})" in
   let from = match from_opt with 
   | Some date's -> date's
   | None -> if stop then "" else 
     failwith "we need a from date for naming samples and results" in
 
-  let port_base = match (elem_match argv "--base=(\\d+)") with
+  let port_base = match (opt argv "--base=(\\d+)") with
   | Some base's -> int_of_string base's
   | None -> if stop then 0 else
     failwith "we need a port base to start things" in
   
-  let ppp_filename = match (elem_match argv "--ppp=(.*\\.ppp)") with
+  let ppp_filename = match (opt argv "--ppp=(.*\\.ppp)") with
   | Some filename -> filename
   | None -> failwith "we need a filename for person_port_pids file, for reals" in
   

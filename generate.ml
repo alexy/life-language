@@ -15,14 +15,14 @@ let generate lm seq len =
   let news = lm#complete_sentence seqlen prefix in
   news
   
-let create_client order port =
+let create_client order port vocab =
     let port's = sprintf "%d@localhost" port in
     printf "creating client for %s\n" port's;
-    let client =  new lmclient port's order in
+    let client =  new lmclient port's order vocab in
     assert (client#int_handle > 0);
     client (* :> baseclient *)
 
-let opt = Argv.elem_match
+let opt = Utils.elem_match
 
 let () =
   let argv = Array.to_list Sys.argv in
@@ -52,13 +52,14 @@ let () =
     List.find (fun (p,_) -> p = person) person_ports
   with Not_found -> failwith "this person is not modeled by our servers" in
   
+  let vocab = "/Users/alexyk/cells/vocab/all-cells.txt" in
   let port = snd our_pp in
-  let lm = create_client order port in
+  let lm = create_client order port vocab in
   let ppl40 = lm#compute "/Users/alexyk/cells/seq40" in
   printf "seq40 compute =>\n%s\n\n" ppl40;
   printf "reading sample from %s\n" seqfile;
   let seq = Seq.read_cells seqfile in
-  let seq = [1;2;3;4;5;6;7;8;9;10] in
+  (* let seq = [1;2;3;4;5;6;7;8;9;10] in *)
   let news = generate lm seq len in
   printf "original prefix: %s\n" (join seq);
   printf "generated -+%d words: %s\n" len (join news) (* (String.concat " " news') *)

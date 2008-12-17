@@ -16,7 +16,7 @@ let () =
     printf "handle = %d\n" lm#int_handle; flush stdout;
     let results = lm#compute "/Users/alexyk/cells/seq40" in
     Printf.printf "=> %s\n" results;
-    lm) [8;3]
+    lm) [1;3]
   in
   (* NB is there a way to do something like,
     (List.map lmclient#int_handle lms)

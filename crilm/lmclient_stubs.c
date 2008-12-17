@@ -99,10 +99,17 @@ extern "C" value lmclient_complete_sentence (value v_lm_handle, value v_maxwords
 }
 
 
+
 extern "C" value lmclient_create (value v_server, value v_order, value v_vocab) {
   CAMLparam3 (v_server, v_order, v_vocab);
-  File vocab_file(String_val(v_vocab), "r");
+  const char *vocab_filename = String_val(v_vocab);
 
+  // NB: flush somehow gets translated into caml_flush, which is not available,
+  // even with include <caml/compatibility.h> where it's defined?!
+  #define _flush flush
+  #undef flush
+  // cerr << "vocab_filename: [" << vocab_filename << "]" << endl << flush;
+  
   if (num_clients >= MAX_LM_CLIENTS) {
     CAMLreturn (Val_int(-1));
   }
@@ -112,10 +119,15 @@ extern "C" value lmclient_create (value v_server, value v_order, value v_vocab) 
   
   Vocab *vocab = new Vocab;
   assert(vocab != 0);
-  cerr << "client " << (num_clients+1) << " reading vocab " << vocab_file.name << endl;
-  vocab->read(vocab_file);
+
+  if (strlen(vocab_filename) > 0) {
+      cerr << "client " << (num_clients+1) << " reading vocab " << vocab_filename << endl << flush;
+      File vocab_file(vocab_filename, "r"); // vocab_file.name == vocab_filename
+      vocab->read(vocab_file);
+      }
   vocab->remove(vocab->ssIndex());
   vocab->remove(vocab->seIndex());
+  #define flush _flush
   
   useLM = new LMClient(
     /*Vocab &*/ *vocab, 

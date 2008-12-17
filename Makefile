@@ -12,13 +12,13 @@ LMCLIENT_X = -I crilm crilm/lmclient.cmxa crilm/lmclass.cmx crilm/generate.o
 # TCL_{INCLUDE,LIBRARY} and adding a line:
 # NO_TCL=yes
 SRILM=/s/src/srilm/current
-SRILM_CCLIB=-cclib -L$(SRILM)/lib/macosx -cclib '-loolm -lmisc -ldstruct' -cclib -lm crilm/generate.o
+SRILM_CCLIB=-cclib -L$(SRILM)/lib/macosx -cclib '-loolm -lmisc -ldstruct' -cclib -lm
 CC_LIBS = -cclib -lstdc++ $(SRILM_CCLIB)
 PARALLEL=parallel
 
-EVALMO=baseclient.cmo process.cmo clclass.cmo syclass.cmo evalm.cmo
-CORE_CMOS=$(EVALMO) argv.cmo common.cmo
-SAMPLO=$(PARALLEL).cmo dataframe.cmo $(CORE_CMOS) seq.cmo utils.cmo sample.cmo
+EVALMO=baseclient.cmo process.cmo clclass.cmo syclass.cmo $(LMCLASS_A)
+CORE_CMOS=$(EVALMO) utils.cmo common.cmo evalm.cmo
+SAMPLO=$(PARALLEL).cmo dataframe.cmo $(CORE_CMOS) seq.cmo
 SERVO=$(CORE_CMOS) servctl.cmo
 
 SAMPLX=${SAMPLO:.cmo=.cmx}
@@ -29,7 +29,7 @@ USE_POSTGRES=-DUSE_POSTGRES
 
 all: sent
 
-argv.cmo: argv.ml
+utils.cmo: utils.ml
 	ocamlfind ocamlc $(DEBUG) -package pcre -c $^ -o $@
 	
 sent: argv.cmo seq.cmo utils.cmo common.cmo baseclient.cmo $(LMCLASS_A) generate.ml
@@ -66,8 +66,8 @@ baseclient.cmo: %.cmo: %.ml
 	
 #clclass.cmo syclass.cmo crilm/lmclass.cmo: baseclient.cmo
 	
-evalm.cmo: $(EVALMO) $(LMCLASS_A) 
-	ocamlfind ocamlc $(DEBUG) -thread -package unix,str,ethread -linkpkg -c $(EVALMO) $(LMCLIENT_A) -o $@ 
+evalm.cmo: evalm.ml $(EVALMO) $(LMCLASS_A)
+	ocamlfind ocamlc $(DEBUG) -package unix,str -linkpkg $(EVALMO) $(LMCLIENT_A) -c $< -o $@ 
 
 evalm.cmx: evalm.ml process.cmx clclass.cmo syclass.cmo
 	ocamlfind ocamlopt -package unix,str -linkpkg $(LMCLIENT_X) -c $< -o $@ 
@@ -75,8 +75,8 @@ evalm.cmx: evalm.ml process.cmx clclass.cmo syclass.cmo
 sample.cmo: sample.ml $(LMCLASS_A)
 	ocamlfind ocamlc $(DEBUG) -package pcre -o $@ -c $<
 
-sample: $(SAMPLO) $(LMCLASS_A)
-	 ocamlfind ocamlc $(DEBUG) -thread -package unix,str,pcre,ethread -linkpkg $^ $(LMCLIENT_A) $(CC_LIBS) -o $@ 
+sample: $(SAMPLO) $(LMCLASS_A) sample.ml
+	 ocamlfind ocamlc $(DEBUG) -package unix,str,pcre -linkpkg $(LMCLIENT_A) $^ $(CC_LIBS) -o $@ 
 	
 samplebin: 
 	 ocamlfind ocamlopt -thread -package str,unix,pcre,ethread -linkpkg $(LMCLIENT_X) $(CC_LIBS) -o $@ $^

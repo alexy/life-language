@@ -251,10 +251,11 @@ let evalaway_serv person_ports link date seqfile  =
   let lares = sort_perp_lists lres in
   lares
   
-let create_all_clients order person_ports =
+let create_all_clients order ?(vocab="") person_ports =
+  (* printf "well, vocab is: [%s]\n" vocab; flush stdout; *)
   List.map (function person,port -> 
     let port's = sprintf "%d@localhost" port in
-    let client =  new lmclient port's order in
+    let client =  new lmclient port's order vocab in
     assert (client#int_handle > 0);
       (* NB: we're forced to upclass here, in sample is not enough -- 
         despite upperclass_clients -- let's try to relax that! *)
