@@ -61,7 +61,7 @@ let read_cells ?skip ?n filename =
     try
       let c = input_char ic in
       match c with
-      | ' ' | '\t' | '\n' -> if (Buffer.length buf) == 0 
+      | ' ' | '\t' -> if (Buffer.length buf) == 0 
         then parse ic buf len res 
         else let number = int_of_string (Buffer.contents buf) in
         begin
@@ -77,6 +77,7 @@ let read_cells ?skip ?n filename =
           Buffer.add_char buf c;
           parse ic buf len res
         end
+      | '\n' -> close_in ic; List.rev res
       | _ -> printf "[%c]\n" c; failwith "bad number file"
     with End_of_file -> close_in ic; List.rev res
     in
