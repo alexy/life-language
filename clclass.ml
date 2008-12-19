@@ -7,6 +7,7 @@ object (self)
   initializer 
     let prefix = Printf.sprintf "ngram -lm %s -order %d -debug 1 -ppl " lm order in
     command <- prefix;
+  method create      = ()
   method destroy     = 0
   method get_person  = person
   method get_order   = order

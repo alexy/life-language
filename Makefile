@@ -96,7 +96,15 @@ clean:
 			
 .SUFFIXES: .cmo .cmi .ml
 
-test-sample:
-	./servctl --from=2004-10-01 --ppp=2004-10-01.ppp --base=10000 start
-	./sample  --from=2004-10-01 --ppp=2004-10-01.ppp --matrix=percells.bin --take=3 --clients
-	./servctl --from=2004-10-01 --ppp=2004-10-01.ppp stop
+
+start:
+	./servctl --ppp=2004-10-01.ppp --base=10000 --order=5 --maxclients=2 start
+
+run:
+	./sample  --ppp=2004-10-01.ppp --batch=10 --take=3 --clients --parallel
+
+stop:
+	./servctl --ppp=2004-10-01.ppp stop
+
+kill:
+	 ps auxwww | grep ngram | cut -d' ' -f4 | xargs kill

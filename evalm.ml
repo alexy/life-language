@@ -153,7 +153,7 @@ let spawn_server_process command_line_prefix port =
   Unix.create_process args.(0) args in_fd out_fd err_fd
 
 
-let launch_lm_server dir ?date port_base oc_ppp =
+let launch_lm_server order maxclients dir ?date port_base oc_ppp =
   let person's = Filename.basename dir in
   let person   = int_of_string person's in
   let (person'date, date's) = 
@@ -166,7 +166,8 @@ let launch_lm_server dir ?date port_base oc_ppp =
     begin
       (* NB! maxclients == 1 for forced serialization,
         until system-wide semaphores work... *)
-      let command_line_prefix = sprintf "ngram -lm %s -order 5 -server-maxclients 1 -server-port" lm in
+      let command_line_prefix = sprintf "ngram -lm %s -order %d -server-maxclients %d -server-port" 
+        lm order maxclients in
       let port = person_port port_base person in
       (* print_endline command_line_prefix; *)
       let pid = spawn_server_process command_line_prefix port in
@@ -178,7 +179,7 @@ let launch_lm_server dir ?date port_base oc_ppp =
     None
       
       
-let launch_all_servers ?(f=launch_lm_server) root ?date port_base ppp_filename =
+let launch_all_servers ?(f=launch_lm_server) order maxclients root ?date port_base ppp_filename =
   let oc_ppp = open_out ppp_filename in
   let numbers = Str.regexp "^[0-9]+$" in
   let subdirs = Array.to_list (Sys.readdir root) in
@@ -189,9 +190,9 @@ let launch_all_servers ?(f=launch_lm_server) root ?date port_base ppp_filename =
   let subdirs = List.map string_of_int (Array.to_list subdirs) in
   let opt_ppp = match date with
     | Some date ->
-      List.map (fun x -> f (Filename.concat root x) ~date:date port_base oc_ppp) subdirs
+      List.map (fun x -> f order maxclients (Filename.concat root x) ~date:date port_base oc_ppp) subdirs
     | None ->
-      List.map (fun x -> f (Filename.concat root x) port_base oc_ppp) subdirs
+      List.map (fun x -> f order maxclients (Filename.concat root x) port_base oc_ppp) subdirs
   in
   close_out oc_ppp;
   let some_ppp = List.filter (function | Some _ -> true | None -> false)      opt_ppp  in
@@ -251,16 +252,19 @@ let evalaway_serv person_ports link date seqfile  =
   let lares = sort_perp_lists lres in
   lares
   
-let create_all_clients order ?(vocab="") person_ports =
+let create_all_clients ?(init=true) ?(vocab="") order person_ports =
   (* printf "well, vocab is: [%s]\n" vocab; flush stdout; *)
   List.map (function person,port -> 
     let port's = sprintf "%d@localhost" port in
-    let client =  new lmclient port's order vocab in
-    assert (client#int_handle > 0);
+    let client =  new lmclient ~init:init port's order vocab in
+    if init then assert (client#int_handle > 0) else ();
       (* NB: we're forced to upclass here, in sample is not enough -- 
         despite upperclass_clients -- let's try to relax that! *)
     person,(client :> baseclient)) person_ports
     
+let init_all_clients pp = 
+  List.map (fun (_,lm) -> lm#create) pp
+  
 let destroy_all_clients person_clients =
   let clients = List.map snd person_clients in
   let backwards = List.rev clients in

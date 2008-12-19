@@ -1,7 +1,7 @@
 open Baseclient
 open Printf
 
-class lmclient (port: string) (order: int) (vocab: string) =
+class lmclient ?(init=true) (port: string) (order: int) (vocab: string) =
 object (self)
 inherit baseclient
 
@@ -11,18 +11,23 @@ inherit baseclient
   val mutable destroyed = false
   (* val mutable sem = Semaphore.create 1 *)
   
+  method create =
+    (* printf "calling create with port %s, order %d, vocab [%s]\n" port order vocab; flush stdout; *)
+    handle   <- Lmclient.create port order vocab;
+    handle_i <- Lmclient.int_of_handle handle;
+    finalize <- (0, handle);
+    
   method destroy =
     destroyed <- true;
     Lmclient.destroy handle
-  initializer 
-    (* printf "calling create with port %s, order %d, vocab [%s]\n" port order vocab; flush stdout; *)
-    handle   <- Lmclient.create port order vocab;
-    finalize <- (0, handle);
-    handle_i <- Lmclient.int_of_handle handle;
+
+  initializer
+    if init then self#create else ();
     (* see caml-list and #ocaml log of 2008-12-12 *)
     Gc.finalise (fun (_,x) -> 
       if destroyed then () else begin destroyed <- true; 
       ignore (Lmclient.destroy x) end) finalize
+
   method get_port   = port
   method get_order  = order
   method get_handle = handle

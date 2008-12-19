@@ -32,3 +32,15 @@ let rec drop n l =
   | x::xs when n > 0 -> go (n-1) xs 
   | xs -> xs in
   go n l
+
+(* The Fisher-Yates shuffle (aka Knuth Shuffle), by Martin Bishop,
+   http://forge.ocamlcore.org/snippet/detail.php?type=snippet&id=1
+ *)
+let shuffle a =
+  for n = ((Array.length a) - 1) downto 0 do
+    Random.self_init ();
+    let k = Random.int (n + 1) in
+    let temp = a.(n) in
+      a.(n) <- a.(k);
+      a.(k) <- temp
+  done

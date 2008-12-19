@@ -323,7 +323,7 @@ let () =
     | Some filename -> begin let ppp = Common.read_ppp filename in 
                        let pp = List.map (function x,y,_ -> x,y) ppp in
                        match link with
-                       | true -> upperclass_clients (Evalm.create_all_clients order pp)
+                       | true -> upperclass_clients (Evalm.create_all_clients ~init:(not parallel) order pp)
                        | _    -> upperclass_clients (Evalm.create_all_systems order pp)
                        end
                        (* the range below can be obtained from examining cells/ *)
@@ -375,7 +375,35 @@ let () =
   let ranks_filename = ranks_base ^ sample_suffix in
 
   let the_map = if parallel then
-    Parallel.pmap ~process_count:2
+    Parallel.pmap_init ~process_count:2 (fun l ->
+      (* -- do one in reverse; hard to invert
+         -- without knowing your id!
+         let flip = List.length l mod 2 = 0 in *)
+      (* let flip = !Parallel.global_process_count = 1 in *)
+      (* let flip = Random.int 2 = 0 in
+         let pp = if flip then person_ports else List.rev person_ports in *)
+         
+      (* -- shuffle 
+        let aa = Array.of_list person_ports in
+            Utils.shuffle aa;
+            let pp = Array.to_list aa in *)
+      (* let secs = Random.int 5 in Unix.sleep secs; *)
+      print_endline "hit enter please:";
+      let i = 
+      try
+          let c = input_line stdin in
+          int_of_string c
+      with _ -> 0 in
+      let flip = i = 1 in
+      let pp = if flip then begin
+        printf "=> straight! %d\n" i;
+        person_ports 
+      end
+      else begin 
+        printf "<= reverting %d\n" i;
+        List.rev person_ports
+      end in
+      Evalm.init_all_clients pp)
   else List.map in
    
   let ranks = 
@@ -412,7 +440,7 @@ let () =
   print_results ranks; flush stdout;
   write_results ranks ranks_filename;
   
-  if link then Evalm.destroy_all_clients person_ports else ();
+  if link && not parallel then Evalm.destroy_all_clients person_ports else ();
   
   (* NB add time period for sample and test span coverage *)
   (* NB people clustering by top rank *)

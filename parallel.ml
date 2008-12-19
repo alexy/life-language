@@ -252,6 +252,8 @@ let pfoldr1 f = pmapReduce (foldr1 f) (foldr1 f)
 
 let piter f = pmapReduce ignore (iter f)
 let pmap f = pmapReduce concat (map f)
+let pmap_init init f     = pmapReduce concat (fun l -> init l; map f l)
+
 let pfilter f = pmapReduce concat (filter f)
 
 let pfoldlSeqN ?process_count n r f init l =
