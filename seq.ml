@@ -23,7 +23,7 @@ let rec skip_n_spaces ic n =
   match c with 
   | ' ' | '\t' | '\n' -> if n == 1 then () else skip_n_spaces ic (n-1)
   | _ -> skip_n_spaces ic n
-      
+
 
 (* NB: add EOF handling *)
 let skip_n_words ic n =
@@ -50,73 +50,62 @@ let skip_n_words ic n =
     in
     if n <= 0 then () 
     else go ic (n-1)
-let read_cells ?skip ?n filename =
-  let ic = open_in filename in begin
-  match skip with
+let read_cells ?(skip=None) ?(n=None) ic =
+  begin match skip with
     | Some n -> skip_n_words ic n
-    | None -> () 
-  end;
+    | None -> ()
+  end; 
   let buf = Buffer.create 10 in
   let rec parse ic buf len res =
     try
       let c = input_char ic in
       match c with
-      | ' ' | '\t' -> if (Buffer.length buf) == 0 
-        then parse ic buf len res 
-        else let number = int_of_string (Buffer.contents buf) in
-        begin
-          Buffer.reset buf;
-          let res = number::res in
-          let len = len + 1 in
-          match n with
-          | Some n when len == n -> close_in ic; List.rev res
-          | _ -> parse ic buf len res
-        end
+      | ' ' | '\t' | '\n' -> 
+        if (Buffer.length buf) = 0 then
+          eol_or_parse ic buf len res c
+        else 
+          let number = int_of_string (Buffer.contents buf) in
+          begin
+            Buffer.reset buf;
+            let res = number::res in
+            (* printf "added %d\n" number; *)
+            let len = len + 1 in
+            match n with
+            | Some n when len == n -> List.rev res
+            | _ -> eol_or_parse ic buf len res c
+          end
       |'0'..'9' -> 
         begin
           Buffer.add_char buf c;
           parse ic buf len res
         end
-      | '\n' -> close_in ic; List.rev res
       | _ -> printf "[%c]\n" c; failwith "bad number file"
-    with End_of_file -> close_in ic; List.rev res
-    in
+    with End_of_file -> List.rev res
+  and
+  eol_or_parse ic buf len res c =
+  let eol = c = '\n' in
+  if eol then List.rev res 
+  else parse ic buf len res
+  in
     parse ic buf 0 []
 
+let read_cell_line ?skip ?n file =
+  let ic = open_in file in
+  let cells = read_cells ~skip ~n ic in
+  close_in ic;
+  cells
 
-(* -- using DynArray, use extlib or batteries for that
-let read_cells2 ?skip ?n filename =
-  let ic = open_in filename in begin
-  match skip with
-    | Some n -> skip_n_words ic n
-    | None -> () 
-  end;
-  let buf = Buffer.create 10 in
-  let rec parse ic buf len res =
-    try
-      let c = input_char ic in
-      match c with
-      | ' ' | '\n' -> if (Buffer.length buf) == 0 
-        then parse ic buf len res 
-        else let number = int_of_string (Buffer.contents buf) in
-        begin
-          Buffer.reset buf;
-          DynArray.add res number;
-          let len = len + 1 in
-          match n with
-          | Some n when len == n -> close_in ic; (DynArray.to_array res)
-          | _ -> parse ic buf len res
-        end
-      |'0'..'9' -> 
-        begin
-          Buffer.add_char buf c;
-          parse ic buf len res
-        end
-      | _ -> printf "[%c]\n" c; failwith "bad number file"
-    with End_of_file -> close_in ic; (DynArray.to_array res)
-    in
-    parse ic buf 0 (DynArray.create ())
- *)
+let read_many file =
+  let ic = open_in file in
+  let rec go acc = 
+    let cells = read_cells ic in
+    match cells with
+    | [] -> List.rev acc
+    | _ -> go (cells::acc) in
+  let many = go [] in
+  close_in ic;
+  many
+
 
 (* NB: add EOF handling *)
 let rec skip_lines ic n =

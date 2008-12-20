@@ -32,7 +32,7 @@ all: sent
 utils.cmo: utils.ml
 	ocamlfind ocamlc $(DEBUG) -package pcre -c $^ -o $@
 	
-sent: argv.cmo seq.cmo utils.cmo common.cmo baseclient.cmo $(LMCLASS_A) generate.ml
+sent: seq.cmo utils.cmo common.cmo baseclient.cmo $(LMCLASS_A) generate.ml
 	ocamlfind ocamlc $(DEBUG) -package pcre -linkpkg $(LMCLIENT_A) $(CC_LIBS) $^ -o $@
 	
 

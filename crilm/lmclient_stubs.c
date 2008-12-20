@@ -159,8 +159,8 @@ extern "C" value lmclient_destroy (value v_lm_handle) {
 
 extern "C" value lmclient_compute (value v_lm_handle, value v_filename) {
   // don't really know whether we need this, trying everything
-  // against deadlock:
-  enter_blocking_section();
+  // against deadlock -- was not that, so commenting out a critical section:
+  // enter_blocking_section();
   
   CAMLparam2 (v_lm_handle, v_filename);
 
@@ -199,7 +199,7 @@ extern "C" value lmclient_compute (value v_lm_handle, value v_filename) {
   
   string str = oss.str();  
   
-  leave_blocking_section();
+  // leave_blocking_section();
   CAMLreturn (caml_copy_string(str.c_str()));
 }
 

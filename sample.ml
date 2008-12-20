@@ -49,24 +49,7 @@ let matrix_of_percells_too percells =
     (Array.of_list percells);
   matrix
   
-  
-let which_ith list x =
-  let rec go l x i =
-    match l with
-    | x'::xs -> if x = x' then Some i else go xs x (i+1)
-    | _ -> None
-  in go list x 0
-  
-
-let range ?(from=1) upto =
-  (* let range ?from upto = let from = match from with | Some x -> x | None -> 1 in *)
-  let rec go from upto acc =
-    if from > upto then acc else go from (upto-1) (upto::acc)
-  in
-  go from upto []
-  
-let range0 = range ~from:0
-  
+    
 let matrix_column m i = Array.map (fun x -> x.(i)) m
 
 (* find people who have enough of both training and test data *)
@@ -83,16 +66,16 @@ let pput dataframe from sample_len =
   (* let from = Sys.argv.(1) in *)
   (* select a person at random whose training and test sets are non-zero *)
   let colnames,matrix = dataframe in
-  let date_colnum = match (which_ith colnames from) with
+  let date_colnum = match (Utils.which_ith colnames from) with
   | Some i -> i
   | None -> failwith "bad date" in
   let upto_date    = Array.to_list (matrix_column matrix date_colnum) in
-  let total_colnum = match (which_ith colnames "total") with (* (List.length colnames)-1, as the last *)
+  let total_colnum = match (Utils.which_ith colnames "total") with (* (List.length colnames)-1, as the last *)
   | Some i -> i
   | None -> failwith "bad totals" in
   let totals = Array.to_list (matrix_column matrix total_colnum) in
   let people = Array.to_list (matrix_column matrix 0) in (* (which_ith colnames "person_oid") *)
-  let pos_people  = List.combine (range0 ((List.length people)-1)) people in
+  let pos_people  = List.combine (Utils.range0 ((List.length people)-1)) people in
   let upto_totals = List.combine upto_date totals in
   (* PosPeopleUpTo => pput: *)
   let pput        = List.combine pos_people upto_totals in
@@ -125,15 +108,19 @@ let pick_start sample_len our_guy =
   
 let pick_starts sample_len our_guy n =
   (* call a fun n times -- independent of iteration number! *)
-  List.map (fun _ -> pick_start sample_len our_guy) (range n)
+  List.map (fun _ -> pick_start sample_len our_guy) (Utils.range n)
   
-let sample from sample_len our_guy start =
+let sample ?times from sample_len our_guy start =
   let (pos,person_oid),(upto,total) = our_guy in
   let prefix_len = start - 1 in
   let finish = prefix_len + sample_len in
   (* printf "person_oid: %d, skipping %d, upto = %d, total = %d\n" person_oid prefix_len upto total; *)
-  let cells  = Seq.read_cells ~skip:prefix_len ~n:sample_len (person_cells_file person_oid) in
-  let times  = Seq.read_lines ~skip:prefix_len ~n:sample_len (person_times_file person_oid) in
+  let cells  = Seq.read_cell_line ~skip:prefix_len ~n:sample_len (person_cells_file person_oid) in
+  (* NB times are single lines-column file per sample, while sample now is batched multiline;
+     -- therefore we need to figure out a way to stire/read times differently in a single file *)
+  let times  = match times with
+  | Some _ -> Seq.read_lines ~skip:prefix_len ~n:sample_len (person_times_file person_oid)
+  | None -> [] in
   (cells,times),our_guy,(start,finish)
   
 let samples from sample_len our_guy starts =
@@ -198,7 +185,7 @@ let write_samples samples date filename =
   
 let person_rank (oid:int) oids =
   let last = (List.length oids) - 1 in
-  let oids_nth = List.combine oids (range0 last) in
+  let oids_nth = List.combine oids (Utils.range0 last) in
   List.assoc oid oids_nth
 
 let array_find ex array elem =
@@ -327,7 +314,7 @@ let () =
                        | _    -> upperclass_clients (Evalm.create_all_systems order pp)
                        end
                        (* the range below can be obtained from examining cells/ *)
-    | None          -> upperclass_clients (Evalm.create_all_commands from_opt order (range 100)) in
+    | None          -> upperclass_clients (Evalm.create_all_commands from_opt order (Utils.range 100)) in
   let using_what = if using_servers 
   then sprintf "servers (from %s), clients = %s" (unsome ppp_opt) (yes_no link)
   else "files" in
@@ -388,22 +375,26 @@ let () =
             Utils.shuffle aa;
             let pp = Array.to_list aa in *)
       (* let secs = Random.int 5 in Unix.sleep secs; *)
-      print_endline "hit enter please:";
-      let i = 
-      try
-          let c = input_line stdin in
-          int_of_string c
-      with _ -> 0 in
-      let flip = i = 1 in
-      let pp = if flip then begin
-        printf "=> straight! %d\n" i;
-        person_ports 
-      end
-      else begin 
-        printf "<= reverting %d\n" i;
-        List.rev person_ports
-      end in
-      Evalm.init_all_clients pp)
+      
+      (* print_endline "hit enter please:";
+            let i = 
+            try
+                let c = input_line stdin in
+                int_of_string c
+            with _ -> 0 in
+            let flip = i = 1 in
+            let pp = if flip then begin
+              printf "=> straight! %d\n" i;
+              person_ports 
+            end
+            else begin 
+              printf "<= reverting %d\n" i;
+              List.rev person_ports
+            end in
+            Evalm.init_all_clients pp *)
+            
+        Evalm.init_all_clients person_ports)
+        
   else List.map in
    
   let ranks = 
@@ -431,7 +422,7 @@ let () =
         (* else -- can still uncomment and use the below for testing:
               rank_person_file cells from case_list_filename oid *)
         ) 
-      (range each_person_runs) in 
+      (Utils.range each_person_runs) in 
       (* printf "\n=== FINISHED %d ===\n" oid; *)
       res)
     some_people

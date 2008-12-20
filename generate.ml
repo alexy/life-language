@@ -6,22 +6,30 @@ open Baseclient
 (* given a sample, cut of a suffix, generate a bunch of new ones,
   and measure how well we predict the actual *)
 
-let generate lm seq len =
+let generate ?(n=1) lm len seq =
   let seqlen = List.length seq in
-  if len >= seqlen then [] else
-  let prefix,suffix = take (seqlen-len) seq,
+  if len >= seqlen then (seq,[]) else
+  let preflen = seqlen-len in
+  let prefix,suffix = take preflen seq,
                       drop len seq in
   printf "giving prefix [|%s|] and length %d\n" (join prefix) seqlen;
-  let news = lm#complete_sentence seqlen prefix in
-  news
   
+  let suffixes = List.map (fun i ->
+    let news = lm#complete_sentence seqlen prefix in
+    drop preflen news) (range n)
+  in
+  (prefix,suffixes)
+  
+let generate_many n lm len seqs =
+  List.map (generate ~n lm len) seqs
+    
 let create_client order port vocab =
-    let port's = sprintf "%d@localhost" port in
-    printf "creating client for %s\n" port's;
-    let client =  new lmclient port's order vocab in
-    assert (client#int_handle > 0);
-    client (* :> baseclient *)
-
+  let port's = sprintf "%d@localhost" port in
+  printf "creating client for %s\n" port's;
+  let client =  new lmclient port's order vocab in
+  assert (client#int_handle > 0);
+  client (* :> baseclient *)
+     
 let opt = Utils.elem_match
 
 let () =
@@ -55,11 +63,19 @@ let () =
   let vocab = "/Users/alexyk/cells/vocab/all-cells.txt" in
   let port = snd our_pp in
   let lm = create_client order port vocab in
-  let ppl40 = lm#compute "/Users/alexyk/cells/seq40" in
-  printf "seq40 compute =>\n%s\n\n" ppl40;
+  (* -- before vocab.read(), I noticed that
+     -- a computation has to be made to get some real words
+     -- besides -pau- -pau- -pau- ...
+  let ppl = lm#compute seqfile in 
+  printf "seq compute =>\n%s\n\n" ppl; *)
   printf "reading sample from %s\n" seqfile;
-  let seq = Seq.read_cells seqfile in
-  (* let seq = [1;2;3;4;5;6;7;8;9;10] in *)
-  let news = generate lm seq len in
-  printf "original prefix: %s\n" (join seq);
-  printf "generated -+%d words: %s\n" len (join news) (* (String.concat " " news') *)
+  let seqs = Seq.read_many seqfile in
+  (* let seqs = [[1;2;3;4;5;6;7;8;9;10];[10;9;8;7;6;5;4;3;2;1]] in *)
+  
+  let pereach = 3 in
+  let gens = generate_many pereach lm len seqs in
+  List.iter2 (fun seq (prefix,suffixes) ->
+    printf "original sentence: %s\n" (join seq);
+    printf "prefix %d words: %s\n" (List.length prefix) (join prefix);
+    printf "generated +%d words, %d times:\n" len (List.length suffixes);
+    List.iter (fun suffix -> printf "  :%s\n" (join suffix)) suffixes) seqs gens;

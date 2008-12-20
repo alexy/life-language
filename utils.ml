@@ -44,3 +44,20 @@ let shuffle a =
       a.(n) <- a.(k);
       a.(k) <- temp
   done
+  
+let which_ith list x =
+  let rec go l x i =
+    match l with
+    | x'::xs -> if x = x' then Some i else go xs x (i+1)
+    | _ -> None
+  in go list x 0
+  
+
+let range ?(from=1) upto =
+  (* let range ?from upto = let from = match from with | Some x -> x | None -> 1 in *)
+  let rec go from upto acc =
+    if from > upto then acc else go from (upto-1) (upto::acc)
+  in
+  go from upto []
+  
+let range0 = range ~from:0
