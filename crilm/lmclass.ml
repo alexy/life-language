@@ -41,12 +41,14 @@ inherit baseclient
     result
   method complete_sentence maxwords li =      
     let ls = List.map string_of_int li in
-    printf "complete sentence, handle %d, port %s, prefix [%s], maxwords %d\n"
-      handle_i port (String.concat "," ls) maxwords; flush stdout;
+    (* printf "complete sentence, handle %d, port %s, prefix [%s], maxwords %d\n"
+      handle_i port (String.concat "," ls) maxwords; flush stdout; *)
     let context = Array.of_list ls in
     let result  = Lmclient.complete_sentence handle maxwords context in
     let rs = Array.to_list result in
     (* printf "result => %s\n" (String.concat "," rs); flush stdout; *)
     (* rs *)
-    let ri = List.map int_of_string rs in ri
+    let ri = List.map (fun s -> 
+      try int_of_string s with _ -> printf "int_of_string in lmclass: %s\n" s; 0) rs
+      in ri
 end

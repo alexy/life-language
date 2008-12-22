@@ -125,8 +125,11 @@ extern "C" value lmclient_create (value v_server, value v_order, value v_vocab) 
       File vocab_file(vocab_filename, "r"); // vocab_file.name == vocab_filename
       vocab->read(vocab_file);
       }
+
   vocab->remove(vocab->ssIndex());
   vocab->remove(vocab->seIndex());
+  vocab->remove(vocab->pauseIndex());
+  
   #define flush _flush
   
   useLM = new LMClient(
