@@ -23,8 +23,15 @@ def incr h,k
   end
 end
 
+def suffix_length suffixes
+  suffixes[0].length
+end
+
+def prefix_length full,suffixes
+end
+
 def choices full,suffixes
-  suflen = suffixes[0].length
+  suflen = suffix_length suffixes
   pos = (1..suflen).to_a.map{Hash.new}
   hit      = [0] * suflen
   sum_hits = [0] * (suflen+1)
@@ -68,8 +75,11 @@ a.each do |line|
 end
 
 gens.each_with_index do | (prefix, suffixes), i |
+  suflen = suffix_length suffixes
+  preflen = full[i].length - suflen
   pos,hit,sum_hits = choices (full[i],suffixes)
   pos_lens = pos.map {|h| h.size}
+  puts "sample: #{prefix.join ' '}\n||\t\t#{full[i][preflen..full.length].join "\t"}"
   puts "choices: \t#{pos_lens.join "\t"}"
   puts "poshits: \t#{hit.join "\t"}"
   puts "sumhits: #{sum_hits.join "\t"}"
