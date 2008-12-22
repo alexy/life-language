@@ -9,7 +9,6 @@ fullfile = ARGV[0]
 gensfile = ARGV[1]
 
 full = File.open(fullfile).readlines.map{|s|s.split}
-#puts full.join ','
 a = File.open(gensfile).readlines
 
 gens = []
@@ -19,10 +18,8 @@ suffixes = []
 def incr h,k
   if h.member? k
     h[k] += 1
-    #puts "++ #{k}"
   else
     h[k] = 1
-    #puts "new #{k}"
   end
 end
 
@@ -34,10 +31,8 @@ def choices full,suffixes
 
   suffixes.each_with_index do |suffix,i|
     hits = 0
-    #puts "i => #{i}"
     preflen = full.length - suflen
     suffix.each_with_index do |word,j|
-      #puts "i #{i}, word #{word}"
       incr pos[j],word
       if full[preflen+j] == word
         hits += 1
@@ -45,9 +40,6 @@ def choices full,suffixes
       end
     end
     sum_hits[hits] += 1
-    #pp pos
-    #lens = pos.map {|h| h.size}
-    #puts "choices: #{lens.join ','}"
   end
   [pos,hit,sum_hits]
 end
@@ -76,10 +68,10 @@ a.each do |line|
 end
 
 gens.each_with_index do | (prefix, suffixes), i |
-  #puts "prefix [| #{prefix.join ' '} |]: #{suffixes.length} suffixes"
   pos,hit,sum_hits = choices (full[i],suffixes)
   pos_lens = pos.map {|h| h.size}
-  puts "number of choices in each suffix position: #{pos_lens.join ' '}"
-  puts "number of hits in each suffix position: #{hit.join ' '}"
-  puts "total number of suffixes with a given number of hits: #{sum_hits.join ' '}"
+  puts "choices: \t#{pos_lens.join "\t"}"
+  puts "poshits: \t#{hit.join "\t"}"
+  puts "sumhits: #{sum_hits.join "\t"}"
+  puts
 end
