@@ -23,6 +23,12 @@ SERVO=$(CORE_CMOS) servctl.cmo
 
 SAMPLX=${SAMPLO:.cmo=.cmx}
 
+SUFFIX_DIR=/s/src/ocaml/suffix/ferre
+SUFFIX_BASE=cis lSet suffix intseq
+SUFFIX_CMOS_FULL=${SUFFIX_BASE:%=$(SUFFIX_DIR)/%.cmo}
+SUFFIX_CMOS=${SUFFIX_BASE:%=%.cmo}
+SUFFIX_CMXS=${SUFFIX_BASE:%=%.cmx}
+
 # comment this out to compile without pgocaml available:
 USE_POSTGRES=-DUSE_POSTGRES
 
@@ -34,7 +40,6 @@ utils.cmo: utils.ml
 	
 sent: seq.cmo utils.cmo common.cmo baseclient.cmo $(LMCLASS_A) generate.ml
 	ocamlfind ocamlc $(DEBUG) -package pcre -linkpkg $(LMCLIENT_A) $(CC_LIBS) $^ -o $@
-	
 
 cellspans celltimes: %: %.cmo 
 	ocamlfind ocamlc -package $(LINK_PKG) -linkpkg $< -o $@
@@ -58,8 +63,19 @@ $(LMCLASS_A): $(LMCLASS_A:.cmo=.ml)
 %.cmx: %.ml
 	ocamlfind ocamlopt -c $< -o $@
 	
-genlm: genlm.ml
-	ocamlfind ocamlc -package unix,str -linkpkg $< -o $@ 
+treeru: seq.cmo treeru.ml
+	echo suffix objects: $(SUFFIX_CMOS)
+	ocamlfind ocamlc -package str -linkpkg -I $(SUFFIX_DIR) $(SUFFIX_CMOS) $^ -o $@
+
+treeru.opt: seq.cmx treeru.ml
+	echo suffix objects: $(SUFFIX_CMOS)
+	ocamlfind ocamlopt -package str -linkpkg -I $(SUFFIX_DIR) $(SUFFIX_CMXS) $^ -o $@
+	
+unis: seq.cmo unis.ml 
+	ocamlfind ocamlc -package unix,str -linkpkg $^ -o $@ 
+
+genlm: genlm.ml seq.cmo
+	ocamlfind ocamlc -package unix,str -linkpkg $^ -o $@ 
 
 baseclient.cmo: %.cmo: %.ml
 	ocamlfind ocamlc $(DEBUG) -thread -package ethread -c $< -o $@

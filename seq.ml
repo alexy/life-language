@@ -50,6 +50,8 @@ let skip_n_words ic n =
     in
     if n <= 0 then () 
     else go ic (n-1)
+    
+    
 let read_cells ?(skip=None) ?(n=None) ic =
   begin match skip with
     | Some n -> skip_n_words ic n
@@ -132,3 +134,39 @@ let read_lines ?skip ?n filename =
       with End_of_file -> close_in ic; List.rev acc
   in
   go ic 0 []
+
+
+let get_dirs root =
+  let numbers = Str.regexp "^[0-9]+$" in
+  let subdirs = Array.to_list (Sys.readdir root) in
+  let subdirs = List.filter (fun x -> Str.string_match numbers x 0 && x <> "0") subdirs in
+  let subdirs = Array.of_list (List.map int_of_string subdirs) in
+  Array.sort compare subdirs;
+  let subdirs = List.map string_of_int (Array.to_list subdirs) in
+  (* for testing on a short subdir list uncomment below: *)
+  (* let subdirs = ["100";"101"] in *)
+  subdirs
+
+let dir_data dir date =
+  let filename = Filename.basename dir in
+  let filename = filename ^ (match date with Some date -> "-"^date | None -> "") in
+  let pathname = Filename.concat dir filename in
+  pathname
+
+(* general directories walk -- no shared result data *)
+let gendirwalk (f:?mincount:int -> ?date:string -> string -> unit) ?date root =
+  let subdirs = get_dirs root in  
+  match date with
+    | Some date ->
+      List.iter (fun x -> f (Filename.concat root x) ~date) subdirs
+    | None ->
+      List.iter (fun x -> f (Filename.concat root x)) subdirs
+
+
+(* suffix tree walk -- shared result built in st *)
+(* here, f takes an option parameter, instead of the optional one above;
+   unification is desirable once the best practices are determined *)
+  
+let st_dirwalk f st ?date root =
+  let subdirs = get_dirs root in  
+  List.iter (fun x -> f st date (Filename.concat root x)) subdirs

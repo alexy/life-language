@@ -38,19 +38,6 @@ let dir_lm ?mincount ?date dir =
       ignore (Unix.system command2)
   
 (* dir_lm "/Users/alexyk/cells/1" *)
-
-
-let gendirwalk (f:?mincount:int -> ?date:string -> string -> unit) ?date root =
-  let numbers = Str.regexp "^[0-9]+$" in
-  let subdirs = Array.to_list (Sys.readdir root) in
-  let subdirs = List.filter (fun x -> Str.string_match numbers x 0 && x <> "0") subdirs in
-  (* let subdirs = ["9"] in *)
-  
-  match date with
-    | Some date ->
-      List.iter (fun x -> f (Filename.concat root x) ~date:date) subdirs
-    | None ->
-      List.iter (fun x -> f (Filename.concat root x)) subdirs
     
 
 let () =
@@ -62,7 +49,7 @@ let () =
   let home = Unix.getenv "HOME" in
   let cells = Filename.concat home "cells" in
   match date with
-    | Some date's -> gendirwalk dir_lm ~date:date's cells
-    | None        -> gendirwalk dir_lm cells
+    | Some date's -> Seq.gendirwalk dir_lm ~date:date's cells
+    | None        -> Seq.gendirwalk dir_lm cells
     
 (* NB should we use vocab as union of all cells not for all time, but in the training span, and map unseens to unk? *)
