@@ -68,7 +68,7 @@ treeru: seq.cmo treeru.ml
 	ocamlfind ocamlc -package str -linkpkg -I $(SUFFIX_DIR) $(SUFFIX_CMOS) $^ -o $@
 
 treeru.opt: seq.cmx treeru.ml
-	echo suffix objects: $(SUFFIX_CMOS)
+	echo suffix objects: $(SUFFIX_CMXS)
 	ocamlfind ocamlopt -package str -linkpkg -I $(SUFFIX_DIR) $(SUFFIX_CMXS) $^ -o $@
 	
 unis: seq.cmo unis.ml 

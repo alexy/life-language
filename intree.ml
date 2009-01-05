@@ -41,7 +41,12 @@ let root = "/Users/alexyk/cells" in
 Seq.st_dirwalk add_stree st ~date root;
 T.tree st
  *)
- 
+
+
+ (* 
+1 2 3 1 2 3 4 1 2 3
+1 2 1 2 3 7 8 1 2 5   
+  *)
 let st = T.create ()
 let date = "2004-10-01"
 let root = "/Users/alexyk/cells/test"
@@ -135,3 +140,18 @@ let collect_nonempty_paths  = collect_nonempty T.path
 
 let show_nonempty_leaves = walk_leaves collect_nonempty_labels []
 let show_nonempty_paths  = walk_leaves collect_nonempty_paths  []
+
+
+let factor_path t a =
+  let a,s,b = T.find_factor t (Intseq.of_array a) in
+  let leaf's, info = if T.is_leaf t b then
+    let strid,pos = T.suffix t b in
+    let strid's = string_of_int strid in  
+    "yes leaf", strid's 
+  else
+    let ext = T.ext t b in
+    let exts = List.map string_of_int (LSet.elements ext) in
+    let ext's = "[" ^ (String.concat "," exts) ^ "]" in
+    "not leaf", ext's in
+  let [a';s'] = List.map Intseq.to_string [(T.path t a); s] in
+  printf "%s, %s, -- leaf: %s, info: %s\n" a' s' leaf's info
