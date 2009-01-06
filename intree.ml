@@ -6,6 +6,9 @@
    Copyright (c) 2009, Alexy Khrabrov, Cicero Institute
    Author: Alexy Khrabrov <deliverable@gmail.com>  
    License: LGPL
+   
+   This file contains functions and snippets tested in toplevel,
+   it may not load in its entirety right away
  *)
 
 
@@ -210,6 +213,25 @@ let incr_hash h k =
 let show_hash =
   Hashtbl.iter (fun a b -> printf "%d => %d\n" a b)
 
+  
+let show_hashes t s =
+  let h1,h2 = suffice t s in
+  print_endline "leaves:";
+  show_hash h1;
+  print_endline "nodes:";
+  show_hash h2
+
+(* NB modify T.add to record the number of passes by each strid through extent *)
+
+let pair_compare (x,y) (x',y') =
+  if y <> y' then compare y' y else compare x x'
+  
+let sort_hash h =
+  let li = Hashtbl.fold (fun k v acc -> (k,v)::acc) h [] in
+  let a = Array.of_list li in
+  Array.sort pair_compare a;
+  a
+  
 let suffice t s =
   let h1 = Hashtbl.create 1000 in
   let h2 = Hashtbl.create 1000 in
@@ -226,13 +248,10 @@ let suffice t s =
       with Not_found -> ()
     done
   done;
-  (h1, h2)
-  
-let show_hashes t s =
-  let h1,h2 = suffice t s in
-  print_endline "leaves:";
-  show_hash h1;
-  print_endline "nodes:";
-  show_hash h2
-
-(* NB modify T.add to record the number of passes by each strid through extent *)
+  (* (h1, h2) *)
+  (* NB: break ties in a1 via a2 *)
+  let a1 = sort_hash h1 in
+  let a2 = sort_hash h2 in
+  if Array.length a1 > 0 then Some a1.(0)
+  else if Array.length a2 > 0 then Some a2.(0)
+  else None
