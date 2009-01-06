@@ -202,3 +202,37 @@ let show_pairs a =
   let one p = sprintf "(%d,%d)" (fst p) (snd p) in
   "["^(String.concat ";" (List.map one (Array.to_list a)))^"]"
   
+let incr_hash h k =
+  let v = if Hashtbl.mem h k then
+  Hashtbl.find h k else 0 in
+  Hashtbl.replace h k (v+1)
+
+let show_hash =
+  Hashtbl.iter (fun a b -> printf "%d => %d\n" a b)
+
+let suffice t s =
+  let h1 = Hashtbl.create 1000 in
+  let h2 = Hashtbl.create 1000 in
+  let length = Array.length s in
+  let last = length - 1 in
+  for start = 0 to last do
+    for len = 1 to (length-start) do
+      let sub = Array.sub s start len in
+      try
+        let fact = factor_path t sub in
+        match fact with
+        | Leaf i -> incr_hash h1 i
+        | Node a -> Array.iter (incr_hash h2) a
+      with Not_found -> ()
+    done
+  done;
+  (h1, h2)
+  
+let show_hashes t s =
+  let h1,h2 = suffice t s in
+  print_endline "leaves:";
+  show_hash h1;
+  print_endline "nodes:";
+  show_hash h2
+
+(* NB modify T.add to record the number of passes by each strid through extent *)
