@@ -142,7 +142,7 @@ let show_nonempty_leaves = walk_leaves collect_nonempty_labels []
 let show_nonempty_paths  = walk_leaves collect_nonempty_paths  []
 
 
-let factor_path t a =
+let factor_path's t a =
   let a,s,b = T.find_factor t (Intseq.of_array a) in
   let leaf's, info = if T.is_leaf t b then
     let strid,pos = T.suffix t b in
@@ -155,3 +155,50 @@ let factor_path t a =
     "not leaf", ext's in
   let [a';s'] = List.map Intseq.to_string [(T.path t a); s] in
   printf "%s, %s, -- leaf: %s, info: %s\n" a' s' leaf's info
+  
+  
+type leafnode = Leaf of int | Node of int array
+let factor_path t a =
+  let a,s,b = T.find_factor t (Intseq.of_array a) in
+  if T.is_leaf t b then
+    let strid,pos = T.suffix t b in
+    Leaf strid 
+  else
+    let ext = T.ext t b in
+    let extarray = Array.of_list (LSet.elements ext) in
+    Node extarray
+
+
+let subseqs s =
+  let length = Array.length s in
+  let last = length - 1 in
+  for start = 0 to last do
+    for len = 1 to (length-start) do
+      let sub = Array.sub s start len in
+      let sub's = String.concat ";" (List.map string_of_int (Array.to_list sub)) in
+      printf "%d..%d: %s\n" start len sub's
+    done
+  done
+  
+(* NB: count #uniq subseqs for each strid in a suffix tree *)
+
+let count_nonempty tree acc node =
+  let strid,_ = T.suffix tree node in
+  let i = strid - 1 in
+  let x,y = acc.(i) in
+  let label = T.label tree node in
+  let label_empty = Intseq.is_empty label in
+  if  label_empty then
+    acc.(i) <- (x+1,y)
+  else
+    acc.(i) <- (x,y+1);
+  acc
+    
+let count_leaves t =
+  let a = Array.make (T.size t) (0,0) in
+  walk_leaves count_nonempty a t;
+  
+let show_pairs a =
+  let one p = sprintf "(%d,%d)" (fst p) (snd p) in
+  "["^(String.concat ";" (List.map one (Array.to_list a)))^"]"
+  
