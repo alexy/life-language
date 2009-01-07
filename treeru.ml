@@ -137,6 +137,29 @@ let do_sample t sample =
   | Miss -> printf " *"
   end
   (* ; print_endline "" *)
+
+let incr_ids a li =
+  List.iter (fun i -> a.(i)  <- a.(i) + 1) li
+  
+let tally_sample t (a1,a2) sample =
+  let s = Array.of_list sample in
+  match suffice t s with
+  | Both ((_,s1),(_,s2)) -> begin incr_ids a1 s1; incr_ids a2 s2 end
+  | Hit (_,s) -> incr_ids a1 s
+  | Max (_,s) -> incr_ids a2 s
+  | Miss -> ()
+  
+let show_array a = 
+  let li = Array.to_list a in
+  let lis = List.map (fun (x,y) -> sprintf "(%d,%d)" x y) li in
+  "[|"^(String.concat ";" lis)^"|]"
+  
+let sort_desc =  Array.sort (fun (x,_) (y,_) -> compare y x)
+  
+let pos_array a =
+  let len = Array.length a in
+  let b = Array.init len (fun i -> (a.(i),i)) in
+  b
   
 let () =
   let st = T.create () in
@@ -151,5 +174,13 @@ let () =
     (* "/Users/alexyk/cells/input/sample-list_2004-10-01_s10_x10-4_p1" *)
   in
   let samples = Seq.read_many sample_file in
-  List.iter (do_sample st) samples;
-  ()
+  (* List.iter (do_sample st) samples; *)
+  let a1 = Array.make 100 0 in
+  let a2 = Array.make 100 0 in
+  List.iter (tally_sample st (a1,a2)) samples;
+  let b1 = pos_array a1 in
+  let b2 = pos_array a2 in
+  sort_desc b1;
+  sort_desc b2;
+  print_endline (show_array b1);
+  print_endline (show_array b2)
