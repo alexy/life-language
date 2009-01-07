@@ -77,11 +77,23 @@ let incr_hash h k =
   Hashtbl.find h k else 0 in
   Hashtbl.replace h k (v+1)
   
+type clist = int * int list
 type hitmax = 
-  | Both of ((int * int) * (int * int))
-  | Hit of (int * int) | Max of (int * int) | None
+  | Both of (clist * clist)
+  | Hit of clist | Max of clist | Miss
 
 let nonempty a = Array.length a > 0
+
+let top_ids a =
+  let len = Array.length a in
+  if len = 0 then (0,[])
+  else
+    let c = snd a.(0) in
+    let rec go i acc =
+      if i >= len || snd a.(i) <> c then acc
+      else go (i+1) ((fst a.(i))::acc)
+    in
+    (c, go 0 [])
 
 let suffice t s =
   let h1 = Hashtbl.create 1000 in
@@ -104,20 +116,25 @@ let suffice t s =
   let a1 = sort_hash h1 in
   let a2 = sort_hash h2 in
   if nonempty a1 && nonempty a2 then 
-    Both (a1.(0),a2.(0))
+    Both (top_ids a1, top_ids a2)
   else if nonempty a1 then
-    Hit a1.(0)
+    Hit (top_ids a1)
   else if nonempty a2 then 
-    Max a2.(0)
-  else None
+    Max (top_ids a2)
+  else Miss
+  
+let show_ids ?(max=3) li =
+  let l = Utils.take max li in
+  let l's = List.map string_of_int l in
+  String.concat "|" l's
   
 let do_sample t sample =
   let s = Array.of_list sample in begin
   match suffice t s with
-  | Both ((s1,_),(s2,_)) -> printf " %d,%d" s1 s2
-  | Hit (s,_) -> printf " %d!" s
-  | Max (s,_) -> printf " %d?" s
-  | None -> printf " *"
+  | Both ((_,s1),(_,s2)) -> printf " %s,%s" (show_ids s1) (show_ids s2)
+  | Hit (_,s) -> printf " %s!" (show_ids s)
+  | Max (_,s) -> printf " %s?" (show_ids s)
+  | Miss -> printf " *"
   end
   (* ; print_endline "" *)
   

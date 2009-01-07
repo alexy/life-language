@@ -37,6 +37,9 @@ all: sent
 
 utils.cmo: utils.ml
 	ocamlfind ocamlc $(DEBUG) -package pcre -c $^ -o $@
+
+utils.cmx: utils.ml
+	ocamlfind ocamlopt $(DEBUG) -package pcre -c $^ -o $@
 	
 sent: seq.cmo utils.cmo common.cmo baseclient.cmo $(LMCLASS_A) generate.ml
 	ocamlfind ocamlc $(DEBUG) -package pcre -linkpkg $(LMCLIENT_A) $(CC_LIBS) $^ -o $@
@@ -63,13 +66,13 @@ $(LMCLASS_A): $(LMCLASS_A:.cmo=.ml)
 %.cmx: %.ml
 	ocamlfind ocamlopt -c $< -o $@
 	
-treeru: seq.cmo treeru.ml
+treeru: seq.cmo utils.cmo treeru.ml
 	echo suffix objects: $(SUFFIX_CMOS)
-	ocamlfind ocamlc -package str -linkpkg -I $(SUFFIX_DIR) $(SUFFIX_CMOS) $^ -o $@
+	ocamlfind ocamlc -package str,pcre -linkpkg -I $(SUFFIX_DIR) $(SUFFIX_CMOS) $^ -o $@
 
-treeru.opt: seq.cmx treeru.ml
+treeru.opt: seq.cmx utils.cmx treeru.ml
 	echo suffix objects: $(SUFFIX_CMXS)
-	ocamlfind ocamlopt -package str -linkpkg -I $(SUFFIX_DIR) $(SUFFIX_CMXS) $^ -o $@
+	ocamlfind ocamlopt -package str,pcre -linkpkg -I $(SUFFIX_DIR) $(SUFFIX_CMXS) $^ -o $@
 	
 unis: seq.cmo unis.ml 
 	ocamlfind ocamlc -package unix,str -linkpkg $^ -o $@ 

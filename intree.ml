@@ -255,3 +255,15 @@ let suffice t s =
   if Array.length a1 > 0 then Some a1.(0)
   else if Array.length a2 > 0 then Some a2.(0)
   else None
+  
+(* we assume the pairs array is sorted by the second element! *)
+let top_ids ap =
+  let len = Array.length ap in
+  if len = 0 then (0,[])
+  else
+    let c = snd a.(0) in
+    let rec go i acc =
+      if i >= len || snd a.(i) <> c then acc
+      else go (i+1) ((fst a.(i))::acc)
+    in
+    (c, go 0 [])
