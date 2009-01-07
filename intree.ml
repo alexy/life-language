@@ -249,7 +249,7 @@ let suffice t s =
     done
   done;
   (* (h1, h2) *)
-  (* NB: break ties in a1 via a2 *)
+  (* NB: break ties in a1 via a2? *)
   let a1 = sort_hash h1 in
   let a2 = sort_hash h2 in
   if Array.length a1 > 0 then Some a1.(0)
