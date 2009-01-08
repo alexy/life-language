@@ -97,16 +97,26 @@ let read_cell_line ?skip ?n file =
   close_in ic;
   cells
 
-let read_many file =
+(* NB read_many without ?max could be extended with ?max 
+  differently, e.g. 
+  match cells,max with
+  | [],_ -> acc
+  | _,Some n -> ...
+  *)
+  
+let read_many max file =
   let ic = open_in file in
-  let rec go acc = 
-    let cells = read_cells ic in
-    match cells with
-    | [] -> List.rev acc
-    | _ -> go (cells::acc) in
-  let many = go [] in
+  let rec go len acc = 
+    match max with
+    | Some n when len = n -> acc
+    | _ ->
+      let cells = read_cells ic in
+      if cells = [] then acc
+      else go (len+1) (cells::acc)
+    in
+  let many = go 0 [] in
   close_in ic;
-  many
+  List.rev many
 
 
 (* NB: add EOF handling *)
@@ -126,7 +136,7 @@ let read_lines ?skip ?n filename =
   end;
   let rec go ic len acc =
     match n with
-    | Some n when len == n -> close_in ic; List.rev acc
+    | Some n when len = n -> close_in ic; List.rev acc
     | _ ->
       try
         let line = input_line ic in

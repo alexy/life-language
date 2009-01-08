@@ -15,3 +15,6 @@ for distinct date in (person,date,perps)
    for two LMs, compare predicted clouds
    or measure KL divergence
 
+-- sample.ml
+	add an option to match an existing sample set, instead of generating a new one
+

@@ -163,17 +163,25 @@ let pos_array a =
 
 let top_pos a = snd a.(0)
 
-let show_match (best,fuzz) =
+let match's (best,fuzz) =
   let pos = snd and count = fst in
-  printf " %d|%d [%d|%d]" (pos best) (pos fuzz) (count best) (count fuzz);
+  sprintf "%d|%d [%d|%d]" (pos best) (pos fuzz) (count best) (count fuzz)
+
+let show_match m =
+  printf " %s" (match's m);
   flush stdout
 
-let show_matches matches =
-  List.iter show_match matches
+let matches' ms =
+  let li = List.map match's ms in
+  String.concat " " li
   
-let person_match st sample_file =
+let show_matches ms =
+  let len = List.length ms in 
+  printf "%d matches: %s\n" len (matches' ms)
+  
+let person_match st max sample_file =
   let a_size = (T.size st) + 1 in
-  let samples = Seq.read_many sample_file in
+  let samples = Seq.read_many max sample_file in
   let a1 = Array.make a_size 0 in
   let a2 = Array.make a_size 0 in
   List.iter (tally_sample st (a1,a2)) samples;
@@ -186,11 +194,47 @@ let person_match st sample_file =
   let m = (b1.(0), b2.(0)) in
   show_match m;
   m
+
+let remap_matches cells s =
+  let perdi = Seq.get_dirs cells in
+  let range's = List.map string_of_int (Utils.range (List.length perdi)) in
+  let permap = List.map2 (fun x y -> (x,y)) range's perdi in
+  let ss = Str.split (Str.regexp " ") s in
+  let so = Utils.odd ss in
+  let map_one ab = 
+    let lab = Str.split (Str.regexp "|") ab in
+    let bal = List.map (fun x -> List.assoc x permap) lab in
+    let mab = String.concat "|" bal in
+    mab
+  in
+  let som = List.map map_one so in
+  let sm = Utils.odd_even som (Utils.even ss) in
+  String.concat " " sm
   
+let bests s =
+  let ss = Str.split (Str.regexp " ") s in
+  let so = Utils.odd ss in
+  let map_one ab = 
+    let lab = Str.split (Str.regexp "|") ab in
+    int_of_string (List.hd lab)
+  in
+  List.map map_one so
+  
+let sample_persons dir =
+  let samples = Seq.get_samples dir in
+  let people = List.map Seq.sample_person samples in
+  people
+  
+let best_hits s sdir =
+  let just_those = sample_persons sdir in
+  let best_people = bests s in
+  let see = List.map2 (fun x y -> if x = y then 1 else 0) just_those best_people in
+  see
+    
 let () =
-  let input_dir = Sys.argv.(1) in
-  printf "sample from: %s\n" input_dir;
-  let samples = Seq.get_samples input_dir in
+  let sample_dir = Sys.argv.(1) in
+  printf "sample from: %s\n" sample_dir;
+  let samples = Seq.get_samples sample_dir in
   
   let st = T.create () in
   let date = "2004-10-01" in
@@ -200,6 +244,18 @@ let () =
   (* let a = count_leaves st in
   print_endline (show_pairs a); *)
 
-  let matches = List.map (person_match st) samples in
+  (* To limit the number of samples from the original batch,
+     use the batch_cutoff = Some n, otherwise set it to None *)
+  let batch_cutoff = Some 100 in
+  let matches = List.map (person_match st batch_cutoff) samples in
   print_endline "all samples together:";
-  show_matches matches
+  show_matches matches;
+  
+  let ss = remap_matches root (matches' matches) in
+  let hits = best_hits ss sample_dir in
+  let hits_len = List.length hits in
+  let hits_sum = Utils.sum_intlist hits in
+  let hits' = Utils.show_intlist hits in
+  
+  printf "hits: %s\n" hits';
+  printf "total length: %d, hits: %d\n" hits_len hits_sum

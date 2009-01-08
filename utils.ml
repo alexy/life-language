@@ -1,3 +1,5 @@
+let sprintf = Printf.sprintf
+
 (* can this be done with one Pcre.<exec-type-op>?: *)
 let elem_match list regex's =
   let re = Pcre.regexp regex's in
@@ -73,3 +75,19 @@ let range ?(from=1) upto =
   go from upto []
   
 let range0 = range ~from:0
+
+let show_intlist_meat l =
+  let l's = List.map string_of_int l in
+  (String.concat ";" l's)
+  
+let show_intlist l =
+  let meat = show_intlist_meat l in
+  sprintf "[%s]" meat
+
+let show_intarray a = 
+  let ali = Array.to_list a in
+  let meat = show_intlist_meat ali in
+  sprintf "[|%s|]" meat
+  
+let sum_intlist =
+  List.fold_left (fun e acc -> e+acc) 0
