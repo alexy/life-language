@@ -136,6 +136,7 @@ let read_lines ?skip ?n filename =
   go ic 0 []
 
 
+(* NB: could use List.sort to avoid Array<=>List conversions *)
 let get_dirs root =
   let numbers = Str.regexp "^[0-9]+$" in
   let subdirs = Array.to_list (Sys.readdir root) in
@@ -170,3 +171,24 @@ let gendirwalk (f:?mincount:int -> ?date:string -> string -> unit) ?date root =
 let st_dirwalk f st ?date root =
   let subdirs = get_dirs root in  
   List.iter (fun x -> f st date (Filename.concat root x)) subdirs
+
+(* sort person-sample files in the numeric order of pXX numbers *)
+let sample_person_regexp = Pcre.regexp "(\\d+)$"
+
+let sample_person s =
+  int_of_string (Pcre.extract ~rex:sample_person_regexp s).(1)
+
+let compare_sample_persons a b =
+  compare (sample_person a) (sample_person b)
+
+(* NB if we'd have an Array.filter, might avoid 
+   back and forth array<->list conversions;
+   or could use List.sort *)
+let get_samples dir =
+  let pattern = Str.regexp "^sample-list" in
+  let samples = Array.to_list (Sys.readdir dir) in
+  let samples = List.filter (fun x -> Str.string_match pattern x 0) samples in
+  let samples = Array.of_list samples in
+  Array.sort compare_sample_persons samples;
+  let samples = Array.to_list samples in
+  List.map (fun s -> Filename.concat dir s) samples

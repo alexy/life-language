@@ -33,9 +33,22 @@ let rec drop n l =
   | xs -> xs in
   go n l
 
+(* these may be not very efficient, perhaps use fold or direct acc? *)
+
+let rec odd  = function | x::_::xs -> x::(odd xs)  | x -> x
+let rec even = function | _::x::xs -> x::(even xs) | _::x -> x | _ -> []
+
+let rec odd_even o e = 
+  match o,e with
+  | x::xs,y::ys -> x::y::(odd_even xs ys)
+  | xs,[] -> xs
+  | [],ys -> ys
+  
+
 (* The Fisher-Yates shuffle (aka Knuth Shuffle), by Martin Bishop,
    http://forge.ocamlcore.org/snippet/detail.php?type=snippet&id=1
  *)
+
 let shuffle a =
   for n = ((Array.length a) - 1) downto 0 do
     Random.self_init ();
@@ -52,7 +65,6 @@ let which_ith list x =
     | _ -> None
   in go list x 0
   
-
 let range ?(from=1) upto =
   (* let range ?from upto = let from = match from with | Some x -> x | None -> 1 in *)
   let rec go from upto acc =

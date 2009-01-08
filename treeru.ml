@@ -160,8 +160,38 @@ let pos_array a =
   let len = Array.length a in
   let b = Array.init len (fun i -> (a.(i),i)) in
   b
+
+let top_pos a = snd a.(0)
+
+let show_match (best,fuzz) =
+  let pos = snd and count = fst in
+  printf " %d|%d [%d|%d]" (pos best) (pos fuzz) (count best) (count fuzz);
+  flush stdout
+
+let show_matches matches =
+  List.iter show_match matches
+  
+let person_match st sample_file =
+  let a_size = (T.size st) + 1 in
+  let samples = Seq.read_many sample_file in
+  let a1 = Array.make a_size 0 in
+  let a2 = Array.make a_size 0 in
+  List.iter (tally_sample st (a1,a2)) samples;
+  let b1 = pos_array a1 in
+  let b2 = pos_array a2 in
+  sort_desc b1;
+  sort_desc b2;
+  (* print_endline (show_array b1);
+     print_endline (show_array b2) *)
+  let m = (b1.(0), b2.(0)) in
+  show_match m;
+  m
   
 let () =
+  let input_dir = Sys.argv.(1) in
+  printf "sample from: %s\n" input_dir;
+  let samples = Seq.get_samples input_dir in
+  
   let st = T.create () in
   let date = "2004-10-01" in
   let root = "/Users/alexyk/cells" in
@@ -170,17 +200,6 @@ let () =
   (* let a = count_leaves st in
   print_endline (show_pairs a); *)
 
-  let sample_file = Sys.argv.(1)
-    (* "/Users/alexyk/cells/input/sample-list_2004-10-01_s10_x10-4_p1" *)
-  in
-  let samples = Seq.read_many sample_file in
-  (* List.iter (do_sample st) samples; *)
-  let a1 = Array.make 100 0 in
-  let a2 = Array.make 100 0 in
-  List.iter (tally_sample st (a1,a2)) samples;
-  let b1 = pos_array a1 in
-  let b2 = pos_array a2 in
-  sort_desc b1;
-  sort_desc b2;
-  print_endline (show_array b1);
-  print_endline (show_array b2)
+  let matches = List.map (person_match st) samples in
+  print_endline "all samples together:";
+  show_matches matches

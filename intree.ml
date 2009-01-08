@@ -267,3 +267,64 @@ let top_ids ap =
       else go (i+1) ((fst a.(i))::acc)
     in
     (c, go 0 [])
+
+let sample_person_regexp = Pcre.regexp "(\\d+)$"
+
+let sample_person s =
+  int_of_string (Pcre.extract ~rex:sample_person_regexp s).(1)
+
+let compare_sample_persons a b =
+  compare (sample_person a) (sample_person b)
+
+let get_samples dir =
+  let pattern = Str.regexp "^sample-list" in
+  let samples = Array.to_list (Sys.readdir dir) in
+  let samples = List.filter (fun x -> Str.string_match pattern x 0) samples in
+  let samples = Array.of_list samples in
+  Array.sort compare_sample_persons samples;
+  Array.to_list samples
+
+(* remap person ids in a string result of show_matches, such as 
+  "1|76 [5|752] 3|3 [510|598] 71|71 [238|278]..." 
+  to the originals, using Seq.get_dirs <= its range mapping
+  *)
+  
+  
+let remap_matches cells s =
+  let perdi = Seq.get_dirs cells in
+  let range's = List.map string_of_int (Utils.range (List.length perdi)) in
+  let permap = List.map2 (fun x y -> (x,y)) range's perdi in
+  let ss = Str.split (Str.regexp " ") s in
+  let so = Utils.odd ss in
+  let map_one ab = 
+    let lab = Str.split (Str.regexp "|") ab in
+    let bal = List.map (fun x -> List.assoc x permap) lab in
+    let mab = String.concat "|" bal in
+    mab
+  in
+  let som = List.map map_one so in
+  let sm = Utils.odd_even som (Utils.even ss) in
+  String.concat " " sm
+  
+
+let bests s =
+  let ss = Str.split (Str.regexp " ") s in
+  let so = Utils.odd ss in
+  let map_one ab = 
+    let lab = Str.split (Str.regexp "|") ab in
+    int_of_string (List.hd lab)
+  in
+  List.map map_one so
+  
+
+let sample_persons dir =
+  let samples = Seq.get_samples dir in
+  let people = List.map Seq.sample_person samples in
+  people
+  
+
+let best_hits s sdir =
+  let just_those = sample_persons sdir in
+  let best_people = bests s in
+  let see = List.map2 (fun x y -> if x = y then 1 else 0) just_those best_people in
+  see

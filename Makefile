@@ -5,6 +5,7 @@ CMO      :=.cmo
 ML       :=.ml
 
 DEBUG=-g
+
 LMCLASS_A  = crilm/lmclass.cmo
 LMCLIENT_A = -I crilm crilm/lmclient.cma 
 LMCLIENT_X = -I crilm crilm/lmclient.cmxa crilm/lmclass.cmx crilm/generate.o
@@ -35,10 +36,10 @@ USE_POSTGRES=-DUSE_POSTGRES
 
 all: sent
 
-utils.cmo: utils.ml
+utils.cmo seq.cmo: %.cmo: %.ml
 	ocamlfind ocamlc $(DEBUG) -package pcre -c $^ -o $@
 
-utils.cmx: utils.ml
+utils.cmx seq.cmx: %.cmx: %.ml
 	ocamlfind ocamlopt $(DEBUG) -package pcre -c $^ -o $@
 	
 sent: seq.cmo utils.cmo common.cmo baseclient.cmo $(LMCLASS_A) generate.ml
@@ -68,7 +69,7 @@ $(LMCLASS_A): $(LMCLASS_A:.cmo=.ml)
 	
 treeru: seq.cmo utils.cmo treeru.ml
 	echo suffix objects: $(SUFFIX_CMOS)
-	ocamlfind ocamlc -package str,pcre -linkpkg -I $(SUFFIX_DIR) $(SUFFIX_CMOS) $^ -o $@
+	ocamlfind ocamlc $(DEBUG) -package str,pcre -linkpkg -I $(SUFFIX_DIR) $(SUFFIX_CMOS) $^ -o $@
 
 treeru.opt: seq.cmx utils.cmx treeru.ml
 	echo suffix objects: $(SUFFIX_CMXS)
