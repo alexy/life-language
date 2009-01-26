@@ -8,7 +8,7 @@ DEBUG=-g
 
 LMCLASS_A  = crilm/lmclass.cmo
 LMCLIENT_A = -I crilm crilm/lmclient.cma 
-LMCLIENT_X = -I crilm crilm/lmclient.cmxa crilm/lmclass.cmx crilm/generate.o
+LMCLIENT_X = -I crilm crilm/lmclient.cmxa crilm/generate.o
 # compile SRILM with Makefile.machine.macosx, commenting out
 # TCL_{INCLUDE,LIBRARY} and adding a line:
 # NO_TCL=yes
@@ -17,7 +17,8 @@ SRILM_CCLIB=-cclib -L$(SRILM)/lib/macosx -cclib '-loolm -lmisc -ldstruct' -cclib
 CC_LIBS = -cclib -lstdc++ $(SRILM_CCLIB)
 PARALLEL=parallel
 
-EVALMO=baseclient.cmo process.cmo clclass.cmo syclass.cmo $(LMCLASS_A)
+CLASSO=baseclient.cmo process.cmo clclass.cmo syclass.cmo
+EVALMO=$(CLASSO) $(LMCLASS_A)
 CORE_CMOS=$(EVALMO) utils.cmo common.cmo evalm.cmo
 SAMPLO=$(PARALLEL).cmo dataframe.cmo $(CORE_CMOS) seq.cmo
 SERVO=$(CORE_CMOS) servctl.cmo
@@ -67,6 +68,9 @@ $(LMCLASS_A): $(LMCLASS_A:.cmo=.ml)
 %.cmx: %.ml
 	ocamlfind ocamlopt -c $< -o $@
 	
+fertilize: seq.cmo utils.cmo fertilize.ml
+	ocamlfind ocamlc $(DEBUG) -package str,pcre -linkpkg $^ -o $@
+	
 treeru: seq.cmo utils.cmo treeru.ml
 	echo suffix objects: $(SUFFIX_CMOS)
 	ocamlfind ocamlc $(DEBUG) -package str,pcre -linkpkg -I $(SUFFIX_DIR) $(SUFFIX_CMOS) $^ -o $@
@@ -98,8 +102,8 @@ sample.cmo: sample.ml $(LMCLASS_A)
 sample: $(SAMPLO) $(LMCLASS_A) sample.ml
 	 ocamlfind ocamlc $(DEBUG) -package unix,str,pcre -linkpkg $(LMCLIENT_A) $^ $(CC_LIBS) -o $@ 
 	
-samplebin: 
-	 ocamlfind ocamlopt -thread -package str,unix,pcre,ethread -linkpkg $(LMCLIENT_X) $(CC_LIBS) -o $@ $^
+sample.opt: $(SAMPLX) $(LMCLASS_X) sample.ml 
+	 ocamlfind ocamlopt -thread -package str,unix,pcre,ethread -linkpkg  $^ $(LMCLIENT_X) $(CC_LIBS) -o $@
 
 servctl: $(SERVO) $(LMCLASS_A)
 	 ocamlfind ocamlc -g -thread -package str,unix,pcre,ethread -linkpkg $(LMCLIENT_A) $(CC_LIBS) -o $@ $^

@@ -91,3 +91,32 @@ let show_intarray a =
   
 let sum_intlist =
   List.fold_left (fun e acc -> e+acc) 0
+  
+let incr_hash h k =
+  let v = if Hashtbl.mem h k then
+  Hashtbl.find h k else 0 in
+  Hashtbl.replace h k (v+1)
+
+let show_hash =
+  Hashtbl.iter (fun a b -> Printf.printf "%d => %d\n" a b)
+
+let pair_compare (x,y) (x',y') =
+  if y <> y' then compare y' y else compare x x'
+  
+let sort_hash h =
+  let li = Hashtbl.fold (fun k v acc -> (k,v)::acc) h [] in
+  let a = Array.of_list li in
+  Array.sort pair_compare a;
+  a
+
+let show_pairs li =
+  let one p = Printf.sprintf "(%d,%d)" (fst p) (snd p) in
+  "["^(String.concat ";" (List.map one li))^"]"
+
+let rec graph_pairs = function
+  | (a,b)::rest -> begin 
+      Printf.printf "%d\t%d\n" a b;
+      graph_pairs rest
+    end
+  | _ -> ()
+  

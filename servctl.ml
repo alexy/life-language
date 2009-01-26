@@ -26,7 +26,7 @@ let () =
   | None -> 5 in
   let maxclients = match (opt argv "--maxclients=(\\d+)") with
   | Some i -> int_of_string i
-  | None -> 1 in
+  | None -> 2 in
   let port_base = match (opt argv "--base=(\\d+)") with
   | Some base's -> int_of_string base's
   | None -> if stop then 0 else

@@ -63,19 +63,6 @@ let factor_path t a =
     let extarray = Array.of_list (LSet.elements ext) in
     Node extarray
 
-let pair_compare (x,y) (x',y') =
-  if y <> y' then compare y' y else compare x x'
-  
-let sort_hash h =
-  let li = Hashtbl.fold (fun k v acc -> (k,v)::acc) h [] in
-  let a = Array.of_list li in
-  Array.sort pair_compare a;
-  a
-
-let incr_hash h k =
-  let v = if Hashtbl.mem h k then
-  Hashtbl.find h k else 0 in
-  Hashtbl.replace h k (v+1)
   
 type clist = int * int list
 type hitmax = 
@@ -106,15 +93,15 @@ let suffice t s =
       try
         let fact = factor_path t sub in
         match fact with
-        | Leaf i -> incr_hash h1 i
-        | Node a -> Array.iter (incr_hash h2) a
+        | Leaf i -> Utils.incr_hash h1 i
+        | Node a -> Array.iter (Utils.incr_hash h2) a
       with Not_found -> ()
     done
   done;
   (* (h1, h2) *)
   (* NB: break ties in a1 via a2? *)
-  let a1 = sort_hash h1 in
-  let a2 = sort_hash h2 in
+  let a1 = Utils.sort_hash h1 in
+  let a2 = Utils.sort_hash h2 in
   if nonempty a1 && nonempty a2 then 
     Both (top_ids a1, top_ids a2)
   else if nonempty a1 then
@@ -230,24 +217,10 @@ let best_hits s sdir =
   let best_people = bests s in
   let see = List.map2 (fun x y -> if x = y then 1 else 0) just_those best_people in
   see
-    
-let () =
-  let sample_dir = Sys.argv.(1) in
-  printf "sample from: %s\n" sample_dir;
+
+let match_cutoff st root sample_dir cutoff =
   let samples = Seq.get_samples sample_dir in
-  
-  let st = T.create () in
-  let date = "2004-10-01" in
-  let root = "/Users/alexyk/cells" in
-  Seq.st_dirwalk add_stree st ~date root;
-
-  (* let a = count_leaves st in
-  print_endline (show_pairs a); *)
-
-  (* To limit the number of samples from the original batch,
-     use the batch_cutoff = Some n, otherwise set it to None *)
-  let batch_cutoff = Some 100 in
-  let matches = List.map (person_match st batch_cutoff) samples in
+  let matches = List.map (person_match st cutoff) samples in
   print_endline "all samples together:";
   show_matches matches;
   
@@ -259,3 +232,32 @@ let () =
   
   printf "hits: %s\n" hits';
   printf "total length: %d, hits: %d\n" hits_len hits_sum
+    
+let () =
+  let sample_dir = Sys.argv.(1) in
+  printf "sample from: %s; " sample_dir;
+  let batch_cutoff = if Array.length Sys.argv <= 2 then begin
+    printf " no cutoff"; 
+    None end
+  else begin 
+    let n = int_of_string Sys.argv.(2) in
+    printf "cutoff: %d" n; 
+    Some n end
+  in
+  print_endline "";
+  
+  
+  let st = T.create () in
+  let date = "2004-10-01" in
+  let root = "/Users/alexyk/cells" in
+  Seq.st_dirwalk add_stree st ~date root;
+
+  (* let a = count_leaves st in
+  print_endline (show_pairs a); *)
+
+  (* To limit the number of samples from the original batch,
+     use the batch_cutoff = Some n, otherwise set it to None *)
+  (* let batch_cutoff = Some 1 in -- now set by cmdline option *)
+
+  let cutoffs = [None; Some 100; Some 50; Some 20; Some 10; Some 5; Some 1] in
+  List.iter (match_cutoff st root sample_dir) cutoffs
