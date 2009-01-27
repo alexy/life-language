@@ -14,10 +14,10 @@ top <- function(df,n) {
 exact <- function(s) { 
   sm <- ddply(s,.(pid),function(df) median(df$rank,na.rm=T))
   names(sm)[2] <- "medrank"
-  num.exact <- length(sm[sm$medrank==0.0,]$pid)
-  cat(num.exact,"\n")
+  num.exact <-  dim(sm[sm$medrank==0.0,])[1] #length(sm[sm$medrank==0.0,]$pid)
+  num.exact
 }
 
-subsets <- c(5,10,20,50,100,1000)
+subsets <- c(1,2,3,5,10,20,50,100,1000)
 
-sapply(subsets, function (n) exact(top(s,n)))
+sapply(subsets, function (n) cat(n,"\t",exact(top(s,n)),"\n"))

@@ -71,6 +71,9 @@ $(LMCLASS_A): $(LMCLASS_A:.cmo=.ml)
 fertilize: seq.cmo utils.cmo fertilize.ml
 	ocamlfind ocamlc $(DEBUG) -package str,pcre -linkpkg $^ -o $@
 	
+fertilize.opt: seq.cmx utils.cmx fertilize.ml
+	ocamlfind ocamlopt $(DEBUG) -package str,pcre -linkpkg $^ -o $@
+	
 treeru: seq.cmo utils.cmo treeru.ml
 	echo suffix objects: $(SUFFIX_CMOS)
 	ocamlfind ocamlc $(DEBUG) -package str,pcre -linkpkg -I $(SUFFIX_DIR) $(SUFFIX_CMOS) $^ -o $@

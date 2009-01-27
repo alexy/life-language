@@ -21,8 +21,9 @@ let fertility ?(hashsize=1000) points li =
 
 
 let () =
-  let cellfile = Sys.argv.(1) in
+  let points = int_of_string Sys.argv.(1) in
+  let cellfile = Sys.argv.(2) in
   let cells = Seq.read_cell_line cellfile in
-  let graph = fertility 10 cells in
+  let graph = fertility points cells in
   (* print_endline (Utils.show_pairs graph) *)
   Utils.graph_pairs graph
