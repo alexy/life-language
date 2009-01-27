@@ -1,6 +1,6 @@
 a <- list()
 ia <- 0
-for (i in 1:10) { 
+for (i in 1:97) { 
   fname <- paste("/Users/alexyk/cells/",i,"/",i,".fert",sep="")
   if (file.exists(fname)) {
     cat("reading file: ",fname,"\n")
@@ -21,5 +21,6 @@ xs.max.i <- which(xs==xs.max)[1]
 a.max <- a[[xs.max.i]]
 a.rest <- a[-xs.max.i]
 
-plot(a.max)
-sapply(a.rest,lines)
+plot(a.max,type="l")
+#devnull <- sapply(a.rest,lines)
+devnull <- Map(lines,a.rest)
