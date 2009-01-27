@@ -1,4 +1,6 @@
 open Printf
+let leprintf format = eprintf (format ^^ "%!")
+
 (* NB: the below is needed since 
   intseq.ml contains the declaration
   module Intseq : Suffix.ALPHABET = sig ... end 
@@ -19,8 +21,7 @@ let add_stree st date dir =
   let datafile = Seq.dir_data dir date in
   let cells = Array.of_list (Seq.read_cell_line datafile) in
   ignore (T.add st (Intseq.of_array cells));
-  printf "added cells from %s, suffix tree size is now %d\n" datafile (T.size st); 
-  flush stdout
+  leprintf "added cells from %s, suffix tree size is now %d\n" datafile (T.size st)
 
 let walk_leaves f acc t =
   let ft = f t in 
@@ -155,8 +156,7 @@ let match's (best,fuzz) =
   sprintf "%d|%d [%d|%d]" (pos best) (pos fuzz) (count best) (count fuzz)
 
 let show_match m =
-  printf " %s" (match's m);
-  flush stdout
+  leprintf " %s" (match's m)
 
 let matches' ms =
   let li = List.map match's ms in
@@ -221,31 +221,32 @@ let best_hits s sdir =
 let match_cutoff st root sample_dir cutoff =
   let samples = Seq.get_samples sample_dir in
   let matches = List.map (person_match st cutoff) samples in
-  print_endline "all samples together:";
-  show_matches matches;
+  leprintf "\n\n";
+  (* print_endline "all samples together:";
+     show_matches matches; *)
   
   let ss = remap_matches root (matches' matches) in
   let hits = best_hits ss sample_dir in
-  let hits_len = List.length hits in
   let hits_sum = Utils.sum_intlist hits in
-  let hits' = Utils.show_intlist hits in
-  
-  printf "hits: %s\n" hits';
-  printf "total length: %d, hits: %d\n" hits_len hits_sum
+  (* let hits_len = List.length hits in
+  let hits' = Utils.show_intlist hits in  
+  printf "hits: %s\n" hits'; *)
+  let show_cutoff = match cutoff with | Some n -> n | _ -> 1000 in
+  (* printf "total length: %d; cutoff: %d, hits: %d\n" hits_len show_cutoff hits_sum *)
+  printf "%d\t%d\n" show_cutoff hits_sum
     
 let () =
   let sample_dir = Sys.argv.(1) in
-  printf "sample from: %s; " sample_dir;
+  leprintf "sample from: %s; " sample_dir;
   let batch_cutoff = if Array.length Sys.argv <= 2 then begin
-    printf " no cutoff"; 
+    leprintf " no cutoff"; 
     None end
   else begin 
     let n = int_of_string Sys.argv.(2) in
-    printf "cutoff: %d" n; 
+    leprintf "cutoff: %d" n; 
     Some n end
   in
-  print_endline "";
-  
+  leprintf "\n";
   
   let st = T.create () in
   let date = "2004-10-01" in
@@ -259,5 +260,7 @@ let () =
      use the batch_cutoff = Some n, otherwise set it to None *)
   (* let batch_cutoff = Some 1 in -- now set by cmdline option *)
 
-  let cutoffs = [None; Some 100; Some 50; Some 20; Some 10; Some 5; Some 1] in
+  let cutoffs = [None; Some 100; Some 50; Some 20; Some 10; Some 5; Some 3; Some 2; Some 1] in
+  let cutoffs = List.rev cutoffs in (* let's output in the expected graphing order -- 
+    I originally entered cutoffs in decreasing order and didn't want to retype them *)
   List.iter (match_cutoff st root sample_dir) cutoffs
