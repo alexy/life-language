@@ -271,7 +271,9 @@ let upperclass_clients =
 
 let () =
   let argv = Array.to_list Sys.argv in
-  let order = 5 in (* parameterize *)
+  let order = match (opt argv "--order=(\\d+)") with
+  | Some i -> int_of_string i
+  | None -> 5 in
   let ppp_ext = "\\.ppp" in
   let ppp_opt = opt argv ("--ppp=(.*"^ppp_ext^")") in
   let using_servers = ppp_opt <> None in
@@ -358,7 +360,7 @@ let () =
   let sample_list_filename = sample_list_base ^ sample_suffix in
   let sample_info_filename = sample_info_base ^ sample_suffix in
   let ranks = Filename.concat cells "ranks" in
-  let ranks_base = Filename.concat ranks "ranks" in
+  let ranks_base = Filename.concat ranks (sprintf "ranks-%dg" order) in
   let ranks_filename = ranks_base ^ sample_suffix in
 
   let the_map = if parallel then

@@ -1,0 +1,13 @@
+Alexy Khrabrov wrote:
+
+|  I'd like to access the number of contexts for any given ngram, used in Kneser-Ney computation 
+|  (those with the fat dot).  What's a good way to get at them via the C++ API?
+
+You create a ModKneserNey object (Discount.h). Be sure to leave the countsAreModified parameter at the default 
+  value (false).
+
+Then invoke ModKneserNey:: estimate() on your counts.  As  a side effect, the lower-order counts will be 
+  modified to reflect the context type counts.  Note that the counts of ngrams starting with <s> are unchanged 
+  since there are no preceding words for them.
+
+Andreas

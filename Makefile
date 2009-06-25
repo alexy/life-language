@@ -85,8 +85,11 @@ treeru.opt: seq.cmx utils.cmx treeru.ml
 unis: seq.cmo unis.ml 
 	ocamlfind ocamlc -package unix,str -linkpkg $^ -o $@ 
 
-genlm: genlm.ml seq.cmo
-	ocamlfind ocamlc -package unix,str -linkpkg $^ -o $@ 
+genlm: seq.cmo genlm.ml 
+	ocamlfind ocamlc -package unix,str,pcre -linkpkg $^ -o $@ 
+
+genlm.opt: seq.cmx genlm.ml 
+	ocamlfind ocamlopt -package unix,str,pcre -linkpkg $^ -o $@ 
 
 baseclient.cmo: %.cmo: %.ml
 	ocamlfind ocamlc $(DEBUG) -thread -package ethread -c $< -o $@
@@ -106,10 +109,10 @@ sample: $(SAMPLO) $(LMCLASS_A) sample.ml
 	 ocamlfind ocamlc $(DEBUG) -package unix,str,pcre -linkpkg $(LMCLIENT_A) $^ $(CC_LIBS) -o $@ 
 	
 sample.opt: $(SAMPLX) $(LMCLASS_X) sample.ml 
-	 ocamlfind ocamlopt -thread -package str,unix,pcre,ethread -linkpkg  $^ $(LMCLIENT_X) $(CC_LIBS) -o $@
+	 ocamlfind ocamlopt -thread -package str,unix,pcre -linkpkg  $^ $(LMCLIENT_X) $(CC_LIBS) -o $@
 
 servctl: $(SERVO) $(LMCLASS_A)
-	 ocamlfind ocamlc -g -thread -package str,unix,pcre,ethread -linkpkg $(LMCLIENT_A) $(CC_LIBS) -o $@ $^
+	 ocamlfind ocamlc -g -thread -package str,unix,pcre -linkpkg $(LMCLIENT_A) $(CC_LIBS) -o $@ $^
 	
 parmap.cmo parallel.cmo: %.cmo: %.ml
 	 ocamlfind ocamlc -package unix,pcre -o $@ -c $^

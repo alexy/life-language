@@ -275,9 +275,12 @@ let cells = "/Users/alexyk/cells"
 let person_dir person's =
   Filename.concat cells person's
 
-let person_lm person's date'suffix =
+(* specifying order for model file may be unnecessary if a higher-order model
+  is used with a lower -order N for servers and clients; can make optional
+  and use an N-less.lm file in such cases *)
+let person_lm order person's date'suffix =
   let dir = person_dir person's in
-  let lm = sprintf "%s/mitr-wb5-%s%s.lm" dir person's date'suffix in
+  let lm = sprintf "%s/mitr-wb%d-%s%s.lm" dir order person's date'suffix in
   lm
   
 let create_all_commands date order persons =
@@ -288,7 +291,7 @@ let create_all_commands date order persons =
       in
   List.fold_left (fun acc person -> 
     let person's = string_of_int person in
-    let lm = person_lm person's date'suffix in
+    let lm = person_lm order person's date'suffix in
     if Sys.file_exists lm then
       let client = new clclient person order lm in
         (* NB: we're forced to upclass here, in sample is not enough -- 

@@ -9,6 +9,7 @@
 *.a
 *.so
 *.*~
+*.opt
 percells.bin
 *.ppp
 servctl
@@ -19,3 +20,12 @@ crilm/calm
 crilm/calmbin
 swig/*
 sent
+aha-hash.ml
+fertilize
+hashun.ml
+hrange.ml
+stree.ml
+treeru
+treerun
+unis
+genlm
