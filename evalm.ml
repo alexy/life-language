@@ -161,6 +161,7 @@ let launch_lm_server order maxclients dir ?date port_base oc_ppp =
       | Some date -> (person's^"-"^date, date)
       | None -> (person's,"") 
     in
+    (* not using order in the actual file name -- assuming it's a higher-order model than -order *)
   let lm = sprintf "%s/mitr-wb5-%s.lm" dir person'date in
   if Sys.file_exists lm then 
     begin

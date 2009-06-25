@@ -1,7 +1,8 @@
-SRILM=/s/src/srilm/current
+include platform.mk # SRILM_MACHINE
 SRILM_INC=-I$(SRILM)/include
-SRILM_LIB=-L$(SRILM)/lib/macosx -loolm -lmisc -ldstruct -ltcl -lm
-SRILM_CCLIB=-cclib -L$(SRILM)/lib/macosx -cclib '-loolm -lmisc -ldstruct' -cclib -lm
+SRILM_LIBDIR=$(SRILM)/lib/$(SRILM_MACHINE)
+SRILM_LIB=-L$(SRILM_LIBDIR) -loolm -lmisc -ldstruct -lm #-ltcl
+SRILM_CCLIB=-cclib -L$(SRILM_LIBDIR) -cclib '-loolm -lmisc -ldstruct' -cclib -lm
 
 MOD=lmclient
 CLASS=lmclass
@@ -22,7 +23,7 @@ $(STUBS).o: $(STUBS).c generate.h
 	g++ $(DEBUG) $(SRILM_INC) -I`ocamlc -where` -o $@ -c $<
 
 $(CLASS).cmo: $(CLASS).ml $(MOD).cmo
-	ocamlfind ocamlc -thread -package ethread -c $(BASECLASS_INC) $^ -o $@
+	ocamlfind ocamlc -thread -c $(BASECLASS_INC) $^ -o $@
 
 $(CLASS).cmx: $(CLASS).ml $(MOD).cmx
 	ocamlfind ocamlopt -c $(BASECLASS_INC) $^ -o $@
