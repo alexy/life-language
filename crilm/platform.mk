@@ -1,1 +1,0 @@
-SRILM_MACHINE=macosx
