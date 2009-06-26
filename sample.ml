@@ -271,6 +271,9 @@ let upperclass_clients =
 
 let () =
   let argv = Array.to_list Sys.argv in
+  let threads = match (opt argv "--threads=(\\d+)") with
+  | Some i -> int_of_string i
+  | None -> 2 in
   let order = match (opt argv "--order=(\\d+)") with
   | Some i -> int_of_string i
   | None -> 5 in
@@ -364,7 +367,7 @@ let () =
   let ranks_filename = ranks_base ^ sample_suffix in
 
   let the_map = if parallel then
-    Parallel.pmap_init ~process_count:2 (fun l ->
+    Parallel.pmap_init ~process_count:threads (fun l ->
       (* -- do one in reverse; hard to invert
          -- without knowing your id!
          let flip = List.length l mod 2 = 0 in *)
