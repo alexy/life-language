@@ -1,3 +1,4 @@
+include platform.mk
 PROJECT  :=celltimes
 LINK_PKG :=pgocaml
 PGOC_PKG :=-package pgocaml,pgocaml.statements  -syntax camlp4o
@@ -12,8 +13,7 @@ LMCLIENT_X = -I crilm crilm/lmclient.cmxa crilm/generate.o
 # compile SRILM with Makefile.machine.macosx, commenting out
 # TCL_{INCLUDE,LIBRARY} and adding a line:
 # NO_TCL=yes
-SRILM=/s/src/srilm/current
-SRILM_CCLIB=-cclib -L$(SRILM)/lib/macosx -cclib '-loolm -lmisc -ldstruct' -cclib -lm
+SRILM_CCLIB=-cclib -L$(SRILM)/lib/$(SRILM_MACHINE) -cclib '-loolm -lmisc -ldstruct' -cclib -lm
 CC_LIBS = -cclib -lstdc++ $(SRILM_CCLIB)
 PARALLEL=parallel
 
@@ -92,7 +92,7 @@ genlm.opt: seq.cmx genlm.ml
 	ocamlfind ocamlopt -package unix,str,pcre -linkpkg $^ -o $@ 
 
 baseclient.cmo: %.cmo: %.ml
-	ocamlfind ocamlc $(DEBUG) -thread -package ethread -c $< -o $@
+	ocamlfind ocamlc $(DEBUG) -thread -c $< -o $@
 	
 #clclass.cmo syclass.cmo crilm/lmclass.cmo: baseclient.cmo
 	

@@ -1,4 +1,4 @@
-crilm/platform.mk
+platform.mk
 .DS_Store
 */.DS_Store
 *.cmi

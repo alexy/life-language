@@ -1,4 +1,4 @@
-include platform.mk # SRILM_MACHINE
+include ../platform.mk # SRILM_MACHINE
 SRILM_INC=-I$(SRILM)/include
 SRILM_LIBDIR=$(SRILM)/lib/$(SRILM_MACHINE)
 SRILM_LIB=-L$(SRILM_LIBDIR) -loolm -lmisc -ldstruct -lm #-ltcl
@@ -15,12 +15,12 @@ BYTES=$(MOD).cma ../baseclient.cmo lmclass.cmo calm.ml
 all: byte bin
 
 generate.o: generate.cc
-	g++ $(DEBUG) $(SRILM_INC) -o $@ -c $<
+	g++ $(DEBUG) $(SRILM_INC) -fPIC -o $@ -c $<
 
 stubs: $(STUBS).o
 	
 $(STUBS).o: $(STUBS).c generate.h
-	g++ $(DEBUG) $(SRILM_INC) -I`ocamlc -where` -o $@ -c $<
+	g++ $(DEBUG) $(SRILM_INC) -I`ocamlc -where` -fPIC -o $@ -c $<
 
 $(CLASS).cmo: $(CLASS).ml $(MOD).cmo
 	ocamlfind ocamlc -thread -c $(BASECLASS_INC) $^ -o $@
@@ -57,3 +57,7 @@ start-servers:
 	 cd ~/cells
 	 ngram -lm 1/mitr-wb5-3-2004-10-01.lm -order 5 -server-port 10101 &
 	 ngram -lm 3/mitr-wb5-3-2004-10-01.lm -order 5 -server-port 10103 &
+
+clean:
+	rm -f *.o *.cmo *.cmi *.cmx *.a *.so
+
