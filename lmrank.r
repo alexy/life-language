@@ -3,6 +3,8 @@ library(plyr)
 
 file <- argv[1]
 
+longest <- function(v) { rl  <- rle(sort(v)); ls  <- rl$lengths; names(ls)  <- rl$values; ls <- sort(ls,decr=T); as.numeric(names(ls[1])) }
+
 s <- read.table(file)
 names(s) <- c("pid","rank")
 
@@ -12,9 +14,10 @@ top <- function(df,n) {
 }
 
 exact <- function(s) { 
-  sm <- ddply(s,.(pid),function(df) median(df$rank,na.rm=T))
+  sm <- ddply(s,.(pid),function(df) longest(df$rank)) # median(df$rank,na.rm=T)
   names(sm)[2] <- "medrank"
-  num.exact <-  dim(sm[sm$medrank==0.0,])[1] #length(sm[sm$medrank==0.0,]$pid)
+  # ==0.0 exact < 0.5 less
+  num.exact <-  dim(sm[sm$medrank<0.5,])[1] #length(sm[sm$medrank==0.0,]$pid)
   num.exact
 }
 
