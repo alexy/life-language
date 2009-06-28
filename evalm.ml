@@ -271,6 +271,7 @@ let destroy_all_clients person_clients =
   let backwards = List.rev clients in
   List.iter (fun client -> assert (client#destroy >= 0)) backwards
 
+(* NB parameterize cells *)
 let cells = "/Users/alexyk/cells"
 
 let person_dir person's =

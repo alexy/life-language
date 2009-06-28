@@ -214,28 +214,47 @@ let find_rank ?(infinite=1000) person_oid ares =
   
 let find_ranks person_oid lares =
   List.map (find_rank person_oid) lares
+
+let case_filenames base_filenames each_person_runs person run =
+  let (sample_list_filename,sample_info_filename) = base_filenames in
+  let oid = person_oid person in
+  let run's = string_of_int run in
+  let oid's = string_of_int oid in
+  let case_suffix = "_p"^oid's
+    ^ ( if each_person_runs > 1 then "-"^run's else "") in
+  let case_list_filename = sample_list_filename ^ case_suffix in
+  let case_info_filename = sample_info_filename ^ case_suffix in
+  (case_list_filename,case_info_filename)
+  
+let generate_person_batch from sample_len batch case_filenames person =
+  let (case_list_filename,case_info_filename) = case_filenames in
+  let starts = pick_starts sample_len person batch in
+  let observed = samples from sample_len person starts in
+  write_int_lists (sample_cells_list observed) case_list_filename;
+  write_samples   observed from                case_info_filename
   
 let rank_person_file cells from sample_list_filename person_oid =
   (* we'll keep the LM results as both array and list, for convenience *)
   let lares = Evalm.evalaway_file cells (Some from) sample_list_filename in
   find_ranks person_oid lares
 
-let rank_person_serv person_ports link from sample_list_filename person_oid =
+let rank_person_serv person_ports link from sample_list_filename person =
   (* we'll keep the LM results as both array and list, for convenience *)
   (* diversify eval walk order for parallel setups: *)
-  let pp = if person_oid mod 2 = 1 then 
+  let oid = person_oid person in
+  let pp = if oid mod 2 = 1 then 
     begin
-      printf "original order for %d" person_oid; 
+      printf "original order for %d" oid; 
       person_ports 
     end  
   else 
     begin
-      printf "reverting for %d" person_oid;      
+      printf "reverting for %d" oid;      
       List.rev person_ports
     end
   in
   let lares = Evalm.evalaway_serv pp link from sample_list_filename in
-  find_ranks person_oid lares
+  find_ranks oid lares
   
 let take = Utils.take
   
@@ -308,7 +327,11 @@ let () =
   let batch = match (opt argv "--batch=(\\d+)") with
   | Some batch -> int_of_string batch
   | None -> 1 in
+  let batch_reuse = opt argv "(--reuse)" <> None in
   let take_people = opt argv "--take=(\\d+)" in
+  (* let arg_person = match (opt argv "--person=(\\d+)") with
+  | Some n -> Some (int_of_string n)
+  | None -> None in *)
   let link = opt argv "(--clients)" <> None in
   let parallel = opt argv "(--parallel)" <> None in
   (* parameterize home, cells, vocab *)
@@ -325,7 +348,7 @@ let () =
                        (* the range below can be obtained from examining cells/ *)
     | None          -> upperclass_clients (Evalm.create_all_commands from_opt order (Utils.range 100)) in
   let using_what = if using_servers 
-  then sprintf "servers (from %s), clients = %s" (unsome ppp_opt) (yes_no link)
+  then sprintf "servers (from %s), clients = %s, batch_reuse = %s" (unsome ppp_opt) (yes_no link) (yes_no batch_reuse)
   else "files" in
   printf "evaluating on trained before %s using %s\n" from using_what;
  
@@ -365,42 +388,13 @@ let () =
         ^ "-" ^ (string_of_int sample_index) in
   let sample_list_filename = sample_list_base ^ sample_suffix in
   let sample_info_filename = sample_info_base ^ sample_suffix in
+  let sample_base_filenames = (sample_list_filename,sample_info_filename) in
   let ranks = Filename.concat cells "ranks" in
   let ranks_base = Filename.concat ranks (sprintf "ranks-%dg" order) in
   let ranks_filename = ranks_base ^ sample_suffix in
 
   let the_map = if parallel then
-    Parallel.pmap_init ~process_count:threads (fun l ->
-      (* -- do one in reverse; hard to invert
-         -- without knowing your id!
-         let flip = List.length l mod 2 = 0 in *)
-      (* let flip = !Parallel.global_process_count = 1 in *)
-      (* let flip = Random.int 2 = 0 in
-         let pp = if flip then person_ports else List.rev person_ports in *)
-         
-      (* -- shuffle 
-        let aa = Array.of_list person_ports in
-            Utils.shuffle aa;
-            let pp = Array.to_list aa in *)
-      (* let secs = Random.int 5 in Unix.sleep secs; *)
-      
-      (* print_endline "hit enter please:";
-            let i = 
-            try
-                let c = input_line stdin in
-                int_of_string c
-            with _ -> 0 in
-            let flip = i = 1 in
-            let pp = if flip then begin
-              printf "=> straight! %d\n" i;
-              person_ports 
-            end
-            else begin 
-              printf "<= reverting %d\n" i;
-              List.rev person_ports
-            end in
-            Evalm.init_all_clients pp *)
-            
+    Parallel.pmap_init ~process_count:threads (fun l ->            
         Evalm.init_all_clients person_ports)
         
   else List.map in
@@ -408,30 +402,14 @@ let () =
   let ranks = 
     the_map
     (fun person -> 
-      let oid = person_oid person in
-      (* printf "\n--- STARTED %d ---\n" oid; *)
       let res = List.map 
-      (* Parmap.par_map  *)
-      (fun i ->
-        (* printf "runs: i => %d\n" i; *)
-        let starts = pick_starts sample_len person batch in
-        let observed = samples from sample_len person starts in
-        let i's = string_of_int i in
-        let oid's = string_of_int oid in
-        let case_suffix = "_p"^oid's
-          ^ ( if each_person_runs > 1 then "-"^i's else "") in
-        let case_list_filename = sample_list_filename ^ case_suffix in
-        let case_info_filename = sample_info_filename ^ case_suffix in
-        write_int_lists (sample_cells_list observed) case_list_filename;
-        write_samples   observed from                case_info_filename;
-      
-        (* if using_servers then -- now we unified it all with client classes! *)
-        rank_person_serv person_ports link from case_list_filename oid
-        (* else -- can still uncomment and use the below for testing:
-              rank_person_file cells from case_list_filename oid *)
+      (fun run ->
+        let filenames = case_filenames sample_base_filenames each_person_runs person run in
+        if batch_reuse then ()
+        else generate_person_batch from sample_len batch filenames person;
+        rank_person_serv person_ports link from (fst filenames) person
         ) 
       (Utils.range each_person_runs) in 
-      (* printf "\n=== FINISHED %d ===\n" oid; *)
       res)
     some_people
   in
