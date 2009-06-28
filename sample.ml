@@ -244,7 +244,7 @@ let rank_person_serv person_ports link from sample_list_filename person =
   let oid = person_oid person in
   let pp = if true (* oid mod 2 = 1 *) then 
     begin
-      printf "original order for %d" oid; 
+      printf "original order for %d, samples from %s" oid sample_list_filename; 
       person_ports 
     end  
   else 
