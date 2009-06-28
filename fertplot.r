@@ -23,9 +23,17 @@ a.max <- a[[xs.max.i]]
 a.rest <- a[-xs.max.i]
 
 postscript("sensor-fertility.eps",horizontal=F,onefile=F,height=3.5,width=3.2)
-plot(a.max,type="l",ann=F)
+
+par(mar=c(4, 4, 2, 1)+0.1)
+# default margins
+# par(mar=c(5, 4, 4, 2) + 0.1)
+
+# positive tcl means the ticks are facing inwards; 0.5 is the default for tcl
+plot(a.max,type="l",ann=F,cex.axis=0.5,tcl=0.5)
 #devnull <- sapply(a.rest,lines)
 devnull <- Map(lines,a.rest)
-title(main="Fertility of MIT Reality")
-title(xlab="total words", ylab="total new words so far")
+box()
+title(main="Fertility of MIT Reality",cex.main=0.8)
+title(xlab="total words", ylab="total new words so far",cex.lab=0.5)
+
 dev.off()

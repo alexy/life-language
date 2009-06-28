@@ -1,2 +1,2 @@
-time ./sample.opt --order=3 --ppp=2004-10-01.ppp --from=2004-10-01 --sample=100 --matrix=percells.bin --batch=1000 --clients --parallel 
-/servctl --order=3 --maxclients=2 --base=10000 --ppp=2004-10-01.ppp --from=2004-10-01 start
+time ./sample.opt --ppp=2004-10-01.ppp --from=2004-10-01 --sample=100 --matrix=percells.bin --batch=1000 --clients --parallel --order=5 
+./servctl --maxclients=2 --base=10000 --ppp=2004-10-01.ppp --from=2004-10-01 --order=3 start

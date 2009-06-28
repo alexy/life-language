@@ -311,11 +311,14 @@ let () =
   let take_people = opt argv "--take=(\\d+)" in
   let link = opt argv "(--clients)" <> None in
   let parallel = opt argv "(--parallel)" <> None in
+  (* parameterize home, vocab *)
+  let home   = Unix.getenv "HOME" in
+  let vocab  = List.fold_left Filename.concat home ["vocab";"all-cells.txt"] in
   let person_ports = match ppp_opt with
     | Some filename -> begin let ppp = Common.read_ppp filename in 
                        let pp = List.map (function x,y,_ -> x,y) ppp in
                        match link with
-                       | true -> upperclass_clients (Evalm.create_all_clients ~init:(not parallel) order pp)
+                       | true -> upperclass_clients (Evalm.create_all_clients ~init:(not parallel) ~vocab order pp)
                        | _    -> upperclass_clients (Evalm.create_all_systems order pp)
                        end
                        (* the range below can be obtained from examining cells/ *)
@@ -325,7 +328,7 @@ let () =
   else "files" in
   printf "evaluating on trained before %s using %s\n" from using_what;
  
-  let home   = Unix.getenv "HOME" in
+  (* parameterize cells, inputs, samples *)
   let cells  = Filename.concat home "cells" in
   let inputs = Filename.concat cells "input" in
   let sample_filebase = Filename.concat inputs "sample" in
