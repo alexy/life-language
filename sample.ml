@@ -311,9 +311,10 @@ let () =
   let take_people = opt argv "--take=(\\d+)" in
   let link = opt argv "(--clients)" <> None in
   let parallel = opt argv "(--parallel)" <> None in
-  (* parameterize home, vocab *)
+  (* parameterize home, cells, vocab *)
   let home   = Unix.getenv "HOME" in
-  let vocab  = List.fold_left Filename.concat home ["vocab";"all-cells.txt"] in
+  let cells  = Filename.concat home "cells" in
+  let vocab  = List.fold_left Filename.concat cells ["vocab";"all-cells.txt"] in
   let person_ports = match ppp_opt with
     | Some filename -> begin let ppp = Common.read_ppp filename in 
                        let pp = List.map (function x,y,_ -> x,y) ppp in
@@ -328,8 +329,7 @@ let () =
   else "files" in
   printf "evaluating on trained before %s using %s\n" from using_what;
  
-  (* parameterize cells, inputs, samples *)
-  let cells  = Filename.concat home "cells" in
+  (* parameterize inputs, samples *)
   let inputs = Filename.concat cells "input" in
   let sample_filebase = Filename.concat inputs "sample" in
   let sample_list_base = sample_filebase ^ "-list" in
