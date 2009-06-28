@@ -35,7 +35,7 @@ SUFFIX_CMXS=${SUFFIX_BASE:%=%.cmx}
 USE_POSTGRES=-DUSE_POSTGRES
 
 
-all: sent
+all: sample.opt
 
 utils.cmo seq.cmo: %.cmo: %.ml
 	ocamlfind ocamlc $(DEBUG) -package pcre -c $^ -o $@

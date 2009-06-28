@@ -207,6 +207,7 @@ let find_rank ?(infinite=1000) person_oid ares =
   match ranko with
   | Some rank ->
     printf "person_oid %d => rank %d!\n" person_oid rank; flush stdout;
+    (* printf "list: %s\n" (String.concat "," (List.map triple_person's (Array.to_list ares)));*) (* NUM *)
     person_oid,rank
   | None -> printf "*** person_oid %d *** rank not found\n" person_oid;
     printf "list: %s\n" (String.concat "," (List.map triple_person's (Array.to_list ares)));
@@ -242,9 +243,9 @@ let rank_person_serv person_ports link from sample_list_filename person =
   (* we'll keep the LM results as both array and list, for convenience *)
   (* diversify eval walk order for parallel setups: *)
   let oid = person_oid person in
-  let pp = if true (* oid mod 2 = 1 *) then 
+  let pp = if true (* oid mod 2 = 1 *) then (* NUM don't have to revert; shift *)
     begin
-      printf "original order for %d, samples from %s" oid sample_list_filename; 
+      printf "original order for %d, samples from %s\n" oid sample_list_filename; 
       person_ports 
     end  
   else 
@@ -328,6 +329,9 @@ let () =
   | Some batch -> int_of_string batch
   | None -> 1 in
   let batch_reuse = opt argv "(--reuse)" <> None in
+  let suffix = match (opt argv "--suffix=(\\d+)") with
+  | Some s -> int_of_string s
+  | None -> 5 in
   let take_people = opt argv "--take=(\\d+)" in
   (* let arg_person = match (opt argv "--person=(\\d+)") with
   | Some n -> Some (int_of_string n)
@@ -351,6 +355,9 @@ let () =
   then sprintf "servers (from %s), clients = %s, batch_reuse = %s" (unsome ppp_opt) (yes_no link) (yes_no batch_reuse)
   else "files" in
   printf "evaluating on trained before %s using %s\n" from using_what;
+  
+  printf "initializing random number generator";
+  Random.self_init ();
  
   (* parameterize inputs, samples *)
   let inputs = Filename.concat cells "input" in
@@ -380,7 +387,7 @@ let () =
   printf "those people: %s\n" (join the_people);
   printf "ports people: %s\n" (join ports_people);
   
-  let sample_index = 4 in (* use sample_len to differentiate *)
+  let sample_index = suffix in (* use sample_len to differentiate *)
   let sample_suffix = 
           "_" ^ from 
         ^ "_s" ^ (string_of_int sample_len)

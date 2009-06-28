@@ -88,6 +88,19 @@ let show_intarray a =
   let ali = Array.to_list a in
   let meat = show_intlist_meat ali in
   sprintf "[|%s|]" meat
+
+let show_floatlist_meat l =
+  let l's = List.map string_of_float l in
+  (String.concat ";" l's)
+  
+let show_floatlist l =
+  let meat = show_floatlist_meat l in
+  sprintf "[%s]" meat
+
+let show_floatarray a = 
+  let ali = Array.to_list a in
+  let meat = show_floatlist_meat ali in
+  sprintf "[|%s|]" meat
   
 let sum_intlist =
   List.fold_left (fun e acc -> e+acc) 0

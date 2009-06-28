@@ -4,17 +4,20 @@ open Clclass
 open Syclass
 open Baseclient
 
+let (|>) x f = f x
+
 let ppl_stats result = 
     match Str.string_match (Str.regexp
       (* "[^\n]+\n" -- for single-list file and the full pplFile return of stats *)
       (* NB: need a better regexp for xx.yyy[e+NN] floating-point perplexities *)
       "\\([0-9]+\\) zeroprobs, logprob= \\([0-9.e+-]+\\) ppl= \\([0-9.e+-]+\\) ppl1= \\([0-9.e+-]+\\)") 
       result 0 with 
-      | true ->
+      | true -> begin
         let numbers = Array.of_list 
         (List.map (
           fun x -> float_of_string (Str.matched_group x result)) [1;2;3;4]) in
-        Some numbers
+        (* printf "%s\n" (Utils.show_floatarray numbers);*) (* NUM *)
+        Some numbers end
       | _ -> printf "*** NO PERPS! *** => %s\n" result; failwith "no perps"
 
 let rec fourth = function _::_::_::a::xs -> a::(fourth xs) | _ -> []  
@@ -238,9 +241,13 @@ let evalm_link date seqfile person_client =
   let person,client= person_client in
   let client = (client :> baseclient) in
   let result = client#compute seqfile in
-  (* print_endline result; *)
+  (* print_endline result; *) (* NUM debug server output *)
   output_string stdout "."; flush stdout;
-  let stats_list = ppl_lines result in
+  let stats_list = ppl_lines result in  (* NUM *)
+
+  (* stats_list |> List.iter (fun so -> match so with | Some numbers ->
+            printf "%d: %s\n" person (Utils.show_floatarray numbers); | None -> printf "%d no stats\n" person);
+          *)
   List.map (fun stats ->
   person, date, stats) stats_list
   (*  [(personX,date,statsX1);(personX,date,statsX2);...;(personX,date,statsXN)] *)
