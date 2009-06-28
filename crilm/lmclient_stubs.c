@@ -135,7 +135,7 @@ extern "C" value lmclient_create (value v_server, value v_order, value v_vocab) 
   useLM = new LMClient(
     /*Vocab &*/ *vocab, 
     /*const char */ String_val (v_server), 
-    /* unsigned*/ Int_val (v_order), /*unsigned cacheOrder*/ 0);
+    /* unsigned*/ Int_val (v_order), /*unsigned cacheOrder*/ 10);
 
   // handles are always positive, 1-based
   ::lmclient[num_clients++] = useLM;

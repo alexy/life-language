@@ -242,7 +242,7 @@ let rank_person_serv person_ports link from sample_list_filename person =
   (* we'll keep the LM results as both array and list, for convenience *)
   (* diversify eval walk order for parallel setups: *)
   let oid = person_oid person in
-  let pp = if oid mod 2 = 1 then 
+  let pp = if true (* oid mod 2 = 1 *) then 
     begin
       printf "original order for %d" oid; 
       person_ports 
