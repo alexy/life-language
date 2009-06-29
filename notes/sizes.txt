@@ -1,0 +1,1 @@
+for i in [1-9]*; do wc -w $i/$i; done > sizes/sizes.txt

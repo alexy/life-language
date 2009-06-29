@@ -23,17 +23,20 @@ a.max <- a[[xs.max.i]]
 a.rest <- a[-xs.max.i]
 
 postscript("sensor-fertility.eps",horizontal=F,onefile=F,height=3.5,width=3.2)
+graph.color <- "dark red"
+title.color <- "dark blue"
+par(col.main=title.color,col.lab=title.color)
+# text label magnification and tick inversion
+# positive tcl faces inwards, the default is -0.5 outwards
+par(cex.main= 0.8,cex.lab=0.8,cex.axis=0.7,tcl=0.3) # 
+# shrink margins; defaults are: par(mar=c(5, 4, 4, 2) + 0.1,mgp=c(3,1,0))
+par(mar=c(2, 2, 2, 1)+0.1,mgp=c(0,1,1))
 
-par(mar=c(4, 4, 2, 1)+0.1)
-# default margins
-# par(mar=c(5, 4, 4, 2) + 0.1)
-
-# positive tcl means the ticks are facing inwards; 0.5 is the default for tcl
-plot(a.max,type="l",ann=F,cex.axis=0.5,tcl=0.5)
+plot(a.max,type="l",ann=F,col="dark red")
 #devnull <- sapply(a.rest,lines)
-devnull <- Map(lines,a.rest)
+devnull <- Map(function(a) lines(a,col=graph.color),a.rest)
 box()
-title(main="Fertility of MIT Reality",cex.main=0.8)
-title(xlab="total words", ylab="total new words so far",cex.lab=0.5)
+title(main="Fertility of MIT Reality")
+title(xlab="total words", ylab="total new words so far")
 
 dev.off()
