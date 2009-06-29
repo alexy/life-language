@@ -133,3 +133,12 @@ let rec graph_pairs = function
     end
   | _ -> ()
   
+(* Sys.file_exists *)
+let file_exists name =
+  try begin Unix.stat name; true end
+  with Unix.Unix_error _ -> false
+  
+let directory_exists name =
+  try let s = Unix.stat name in s.Unix.st_kind = Unix.S_DIR
+  with Unix.Unix_error _ -> false
+  

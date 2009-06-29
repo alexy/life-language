@@ -243,7 +243,7 @@ let rank_person_serv person_ports link from sample_list_filename person =
   (* we'll keep the LM results as both array and list, for convenience *)
   (* diversify eval walk order for parallel setups: *)
   let oid = person_oid person in
-  let pp = if true (* oid mod 2 = 1 *) then (* NUM don't have to revert; shift *)
+  let pp = if (*true*) oid mod 2 = 1 then (* NUM don't have to revert; shift *)
     begin
       printf "original order for %d, samples from %s\n" oid sample_list_filename; 
       person_ports 
@@ -360,10 +360,34 @@ let () =
   Random.self_init ();
  
   (* parameterize inputs, samples *)
-  let inputs = Filename.concat cells "input" in
+  let sample_index = suffix in (* use sample_len to differentiate *)
+  let sample_suffix = 
+          "_" ^ from 
+        ^ "_s" ^ (string_of_int sample_len)
+        ^ (if batch > 1 then "_x" ^ (string_of_int batch) else "")
+        ^ "-" ^ (string_of_int sample_index) in
+
+  let samples_base = "samples" in
+  let samples_dirname = "samples" ^ sample_suffix in
+  let inputs = List.fold_left Filename.concat cells [samples_base;samples_dirname] in
+
   let sample_filebase = Filename.concat inputs "sample" in
   let sample_list_base = sample_filebase ^ "-list" in
-  let sample_info_base = sample_filebase ^ "-info" in
+  let sample_info_base = sample_filebase ^ "-info" in  
+
+  let sample_list_filename = sample_list_base ^ sample_suffix in
+  let sample_info_filename = sample_info_base ^ sample_suffix in
+  let sample_base_filenames = (sample_list_filename,sample_info_filename) in
+
+  let ranks = Filename.concat cells "ranks" in
+  let ranks_base = Filename.concat ranks (sprintf "ranks-%dg" order) in
+  let ranks_filename = ranks_base ^ sample_suffix in
+  
+  if Utils.directory_exists inputs then ()
+  else begin (* some umask magic is needed to achieve 0755 *)
+    if not batch_reuse then Unix.mkdir inputs 0511
+    else failwith "cannot reuse non-existing samples"
+  end;
   
   (* List.iter (fun i ->
      let observed = sample eligible from sample_len in
@@ -387,19 +411,6 @@ let () =
   printf "those people: %s\n" (join the_people);
   printf "ports people: %s\n" (join ports_people);
   
-  let sample_index = suffix in (* use sample_len to differentiate *)
-  let sample_suffix = 
-          "_" ^ from 
-        ^ "_s" ^ (string_of_int sample_len)
-        ^ (if batch > 1 then "_x" ^ (string_of_int batch) else "")
-        ^ "-" ^ (string_of_int sample_index) in
-  let sample_list_filename = sample_list_base ^ sample_suffix in
-  let sample_info_filename = sample_info_base ^ sample_suffix in
-  let sample_base_filenames = (sample_list_filename,sample_info_filename) in
-  let ranks = Filename.concat cells "ranks" in
-  let ranks_base = Filename.concat ranks (sprintf "ranks-%dg" order) in
-  let ranks_filename = ranks_base ^ sample_suffix in
-
   let the_map = if parallel then
     Parallel.pmap_init ~process_count:threads (fun l ->            
         Evalm.init_all_clients person_ports)
