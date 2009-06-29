@@ -135,7 +135,7 @@ let rec graph_pairs = function
   
 (* Sys.file_exists *)
 let file_exists name =
-  try begin Unix.stat name; true end
+  try begin ignore Unix.stat name; true end
   with Unix.Unix_error _ -> false
   
 let directory_exists name =
