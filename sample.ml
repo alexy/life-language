@@ -384,8 +384,8 @@ let () =
   let ranks_filename = ranks_base ^ sample_suffix in
   
   if Utils.directory_exists inputs then ()
-  else begin (* some umask magic is needed to achieve 0755 *)
-    if not batch_reuse then Unix.mkdir inputs 0511
+  else begin
+    if not batch_reuse then Unix.mkdir inputs 0o755
     else failwith "cannot reuse non-existing samples"
   end;
   
