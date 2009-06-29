@@ -227,6 +227,10 @@ let case_filenames base_filenames each_person_runs person run =
   let case_info_filename = sample_info_filename ^ case_suffix in
   (case_list_filename,case_info_filename)
   
+(* how to verify samples come from the right place in the trajectory:
+   find the start from sample-info, then get the sample with: 
+   cut -d' ' -f31419-31428 ~/cells/7/7
+*)
 let generate_person_batch from sample_len batch case_filenames person =
   let (case_list_filename,case_info_filename) = case_filenames in
   let starts = pick_starts sample_len person batch in

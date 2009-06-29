@@ -21,9 +21,9 @@ top <- function(df,n) {
 
 exact <- function(s) { 
   sm <- ddply(s,.(pid),function(df) longest(df$rank)) # median(df$rank,na.rm=T)
-  names(sm)[2] <- "medrank"
+  names(sm)[2] <- "toprank"
   # ==0.0 exact; < 0.5 for non-integral checks
-  num.exact <-  dim(sm[sm$medrank==0])[1]
+  num.exact <-  dim(sm[sm$toprank<0.5,])[1]
   num.exact
 }
 
